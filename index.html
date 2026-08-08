@@ -299,13 +299,13 @@
     <div class="app-layout">
         <aside class="sidebar">
             <div class="sidebar-tabs">
-                <button class="sidebar-tab-btn active" onclick="switchSidebarTab(this, 'upload')">Ingest File</button>
-                <button class="sidebar-tab-btn" onclick="switchSidebarTab(this, 'vitals')">Vitals Trend</button>
+                <button id="btn-tab-upload" class="sidebar-tab-btn active">Ingest File</button>
+                <button id="btn-tab-vitals" class="sidebar-tab-btn">Vitals Trend</button>
             </div>
 
             <div id="tab-upload" class="sidebar-content active">
-                <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
-                    <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFile(this.files[0])">
+                <div id="dropZone" class="drop-zone">
+                    <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden">
                     <svg style="width:36px; height:36px; margin: 0 auto 0.5rem; color: var(--accent-emerald);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
@@ -354,7 +354,7 @@
 
     const SUPABASE_URL = 'https://autdyccwpbxkgyzwlihg.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
-    var dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+    const dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
     let logs = [];
     let selectedLogIndex = 0;
@@ -370,7 +370,27 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+        // Tab switching bindings
+        document.getElementById('btn-tab-upload').addEventListener('click', function() {
+            switchSidebarTab('upload');
+        });
+        document.getElementById('btn-tab-vitals').addEventListener('click', function() {
+            switchSidebarTab('vitals');
+        });
+
+        // Drop zone file inputs
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
         fetchLogs();
+
         if (dbClient) {
             dbClient.channel('public:diagnostic_logs')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'diagnostic_logs' }, payload => {
@@ -391,13 +411,23 @@
         }
     }
 
-    function switchSidebarTab(btnElement, tabId) {
-        document.querySelectorAll('.sidebar-tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
-        
-        btnElement.classList.add('active');
-        const targetTab = document.getElementById(`tab-${tabId}`);
-        if (targetTab) targetTab.classList.add('active');
+    function switchSidebarTab(tabId) {
+        const btnUpload = document.getElementById('btn-tab-upload');
+        const btnVitals = document.getElementById('btn-tab-vitals');
+        const tabUpload = document.getElementById('tab-upload');
+        const tabVitals = document.getElementById('tab-vitals');
+
+        if (tabId === 'upload') {
+            btnUpload.classList.add('active');
+            btnVitals.classList.remove('active');
+            tabUpload.classList.add('active');
+            tabVitals.classList.remove('active');
+        } else {
+            btnVitals.classList.add('active');
+            btnUpload.classList.remove('active');
+            tabVitals.classList.add('active');
+            tabUpload.classList.remove('active');
+        }
     }
 
     function renderTabs() {
@@ -571,29 +601,35 @@
         const log = logs[index];
         if (!log) return;
         const printWin = window.open('', '_blank');
-        printWin.document.write(`
-            <html>
-            <head>
-                <title>Diagnostic Brief - ${sanitize(log.file_name)}</title>
-                <style>
-                    body { font-family: sans-serif; padding: 24px; line-height: 1.6; color: #0f172a; }
-                    h1 { color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
-                    .box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 8px; margin: 16px 0; }
-                </style>
-            </head>
-            <body>
-                <h1>BioPrint Diagnostic Report</h1>
-                <p><strong>Document:</strong> ${sanitize(log.file_name)}</p>
-                <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
-                <p><strong>Urgency Rating:</strong> ${sanitize(log.urgency_rating)}/5</p>
-                <div class="box">
-                    <h3>Summary Brief</h3>
-                    <p>${sanitize(log.summary)}</p>
-                </div>
-                <script>window.onload = function() { window.print(); }</script>
-            </body>
-            </html>
-        `);
+        if (!printWin) return;
+        
+        printWin.document.write(`<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Diagnostic Brief - ${sanitize(log.file_name)}</title>
+            <style>
+                body { font-family: sans-serif; padding: 24px; line-height: 1.6; color: #0f172a; }
+                h1 { color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
+                .box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 8px; margin: 16px 0; }
+            </style>
+        </head>
+        <body>
+            <h1>BioPrint Diagnostic Report</h1>
+            <p><strong>Document:</strong> ${sanitize(log.file_name)}</p>
+            <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+            <p><strong>Urgency Rating:</strong> ${sanitize(log.urgency_rating)}/5</p>
+            <div class="box">
+                <h3>Summary Brief</h3>
+                <p>${sanitize(log.summary)}</p>
+            </div>
+        </body>
+        </html>`);
+        
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+            printWin.print();
+        }, 250);
     }
 </script>
 </body>
