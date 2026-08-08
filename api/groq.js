@@ -13,15 +13,22 @@ function cleanAndParseJSON(rawText) {
   if (!rawText) throw new Error('Empty response received from LLM model.');
 
   let cleaned = rawText.trim();
+
+  // 1. Remove <think>...</think> reasoning blocks from thinking models (Qwen 3.6 / DeepSeek)
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // 2. Strip markdown code fences (```json ... ```)
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   }
 
+  // 3. Extract the first valid JSON object payload {...}
   const firstMatch = cleaned.match(/\{[\s\S]*\}/);
   if (firstMatch) {
     cleaned = firstMatch[0];
   }
 
+  // 4. Clean trailing commas before closing brackets/braces
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
 
   try {
@@ -63,7 +70,7 @@ module.exports = async function handler(req, res) {
 
     const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English.
 
-Return strictly a valid JSON object following this exact structure with valid JSON types (no markdown, no preamble):
+DO NOT output <think> tags or chain-of-thought reasoning. Return ONLY a valid raw JSON object matching this structure:
 {
   "summary": "1-2 sentence plain English summary of findings",
   "urgency_rating": 3,
@@ -92,7 +99,7 @@ Return strictly a valid JSON object following this exact structure with valid JS
         messages: [
           {
             role: 'system',
-            content: 'You are an automated clinical extraction parser. Output ONLY raw, unformatted valid JSON.'
+            content: 'You are an automated clinical extraction parser. Output ONLY valid raw JSON with zero thoughts, tags, or explanations.'
           },
           {
             role: 'user',
