@@ -1,6 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Base domains and endpoints
 const PROTOCOL = 'https://';
 const SUPABASE_DOMAIN = 'autdyccwpbxkgyzwlihg.supabase.co';
 const GROQ_DOMAIN = 'api.groq.com';
@@ -14,27 +13,29 @@ function cleanAndParseJSON(rawText) {
 
   let cleaned = rawText.trim();
 
-  // 1. Remove <think>...</think> reasoning blocks from thinking models (Qwen 3.6 / DeepSeek)
+  // 1. Remove all <think>...</think> blocks if present
   cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
   // 2. Strip markdown code fences (```json ... ```)
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
+  // 3. Extract strictly between the FIRST '{' and the LAST '}'
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    cleaned = cleaned.slice(startIdx, endIdx + 1);
+  } else {
+    throw new Error('No valid JSON object bounds found in model output.');
   }
 
-  // 3. Extract the first valid JSON object payload {...}
-  const firstMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (firstMatch) {
-    cleaned = firstMatch[0];
-  }
-
-  // 4. Clean trailing commas before closing brackets/braces
+  // 4. Clean trailing commas before closing braces/brackets
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
 
   try {
     return JSON.parse(cleaned);
   } catch (err) {
-    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output: "${rawText.slice(0, 100)}..."`);
+    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output: "${rawText.slice(0, 150)}..."`);
   }
 }
 
@@ -70,7 +71,7 @@ module.exports = async function handler(req, res) {
 
     const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English.
 
-DO NOT output <think> tags or chain-of-thought reasoning. Return ONLY a valid raw JSON object matching this structure:
+Output ONLY a raw, unformatted JSON object matching this schema. Ensure every string value is wrapped in double quotes, all booleans are lowercase (true/false), and no trailing commas exist:
 {
   "summary": "1-2 sentence plain English summary of findings",
   "urgency_rating": 3,
@@ -99,7 +100,7 @@ DO NOT output <think> tags or chain-of-thought reasoning. Return ONLY a valid ra
         messages: [
           {
             role: 'system',
-            content: 'You are an automated clinical extraction parser. Output ONLY valid raw JSON with zero thoughts, tags, or explanations.'
+            content: 'You are an automated medical extraction engine. Output ONLY valid, raw JSON.'
           },
           {
             role: 'user',
@@ -109,7 +110,8 @@ DO NOT output <think> tags or chain-of-thought reasoning. Return ONLY a valid ra
             ]
           }
         ],
-        temperature: 0.1
+        temperature: 0.1,
+        max_tokens: 2048
       })
     });
 
