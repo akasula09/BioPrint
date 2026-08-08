@@ -3,18 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BioPrint | Next-Gen Biometric Intelligence</title>
+  <title>BioPrint | Next-Gen Biometric Extraction & Workflow Engine</title>
   <style>
     :root {
       --bg: #05070f;
       --card-bg: rgba(13, 17, 28, 0.75);
+      --card-hover-bg: rgba(18, 24, 38, 0.85);
       --border-color: rgba(0, 242, 254, 0.18);
+      --border-glow: rgba(0, 242, 254, 0.35);
       --accent-cyan: #00f2fe;
       --accent-blue: #4facfe;
       --glow-cyan: rgba(0, 242, 254, 0.25);
       --glow-blue: rgba(79, 172, 254, 0.25);
       --text: #f1f5f9;
       --text-muted: #94a3b8;
+      --text-dim: #64748b;
     }
 
     * {
@@ -28,11 +31,8 @@
       background-color: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
+      line-height: 1.6;
+      padding: 2rem 1rem 4rem 1rem;
       position: relative;
       overflow-x: hidden;
     }
@@ -52,11 +52,11 @@
     .glow-orb-1 {
       position: fixed;
       top: -10%;
-      left: 20%;
-      width: 500px;
-      height: 500px;
+      left: 15%;
+      width: 600px;
+      height: 600px;
       background: radial-gradient(circle, var(--glow-cyan) 0%, rgba(0, 0, 0, 0) 70%);
-      filter: blur(80px);
+      filter: blur(100px);
       pointer-events: none;
       z-index: 0;
     }
@@ -64,25 +64,71 @@
     .glow-orb-2 {
       position: fixed;
       bottom: -10%;
-      right: 20%;
-      width: 500px;
-      height: 500px;
+      right: 15%;
+      width: 600px;
+      height: 600px;
       background: radial-gradient(circle, var(--glow-blue) 0%, rgba(0, 0, 0, 0) 70%);
-      filter: blur(80px);
+      filter: blur(100px);
       pointer-events: none;
       z-index: 0;
     }
 
-    /* Main Container */
+    /* Layout Wrapper */
     .wrapper {
       position: relative;
       z-index: 1;
-      max-width: 900px;
-      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
+      gap: 3.5rem;
+    }
+
+    /* Navigation Header */
+    nav {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 2.5rem;
+      padding: 1rem 1.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #ffffff;
+    }
+
+    .nav-brand svg {
+      width: 28px;
+      height: 28px;
+      color: var(--accent-cyan);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent-cyan);
     }
 
     /* Hero Section */
@@ -90,12 +136,11 @@
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 24px;
-      padding: 3.5rem 2.5rem;
+      padding: 4rem 2.5rem;
       text-align: center;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-      width: 100%;
       position: relative;
       overflow: hidden;
     }
@@ -107,63 +152,58 @@
       left: 0;
       right: 0;
       height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
-    }
-
-    .logo-container {
-      position: relative;
-      display: inline-block;
-      margin-bottom: 1.5rem;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-blue), transparent);
     }
 
     .logo-badge {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 72px;
-      height: 72px;
-      border-radius: 20px;
+      width: 80px;
+      height: 80px;
+      border-radius: 22px;
       background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.15));
       border: 1px solid var(--border-color);
       color: var(--accent-cyan);
       box-shadow: 0 0 30px var(--glow-cyan);
+      margin: 0 auto 1.5rem auto;
     }
 
     .logo-badge svg {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
     }
 
     .badge-pill {
       display: inline-block;
-      padding: 0.35rem 1rem;
+      padding: 0.4rem 1.2rem;
       border-radius: 9999px;
       background: rgba(0, 242, 254, 0.08);
-      border: 1px solid rgba(0, 242, 254, 0.2);
+      border: 1px solid rgba(0, 242, 254, 0.25);
       color: var(--accent-cyan);
-      font-size: 0.825rem;
+      font-size: 0.85rem;
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
     }
 
     h1 {
-      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-size: clamp(2.5rem, 5vw, 4rem);
       font-weight: 800;
       letter-spacing: -0.03em;
       line-height: 1.1;
-      margin-bottom: 1rem;
+      margin-bottom: 1.25rem;
       background: linear-gradient(135deg, #ffffff 30%, var(--text-muted) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .subtitle {
+    .hero-subtitle {
       color: var(--text-muted);
-      font-size: 1.125rem;
+      font-size: 1.15rem;
       line-height: 1.6;
-      max-width: 600px;
+      max-width: 680px;
       margin: 0 auto 2.5rem;
     }
 
@@ -171,14 +211,15 @@
       display: flex;
       justify-content: center;
       gap: 1rem;
+      flex-wrap: wrap;
     }
 
     .btn-enter {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      padding: 1rem 2.5rem;
+      gap: 0.6rem;
+      padding: 1.1rem 2.75rem;
       font-size: 1.05rem;
       font-weight: 600;
       color: #05070f;
@@ -193,12 +234,8 @@
 
     .btn-enter:hover {
       transform: translateY(-2px);
-      box-shadow: 0 0 35px var(--glow-cyan);
+      box-shadow: 0 0 40px var(--glow-cyan);
       filter: brightness(1.1);
-    }
-
-    .btn-enter:active {
-      transform: translateY(0);
     }
 
     .btn-enter svg {
@@ -208,68 +245,192 @@
     }
 
     .btn-enter:hover svg {
-      transform: translateX(3px);
+      transform: translateX(4px);
     }
 
-    /* Features Grid */
-    .features-grid {
+    /* Section Styles */
+    .section-title {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .section-title h2 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* Overview Section */
+    .overview-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 2.5rem;
+      backdrop-filter: blur(16px);
+      line-height: 1.8;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .overview-card strong {
+      color: #ffffff;
+    }
+
+    /* Grid Layouts */
+    .grid-3 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 1.5rem;
-      width: 100%;
     }
 
-    .feature-card {
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Cards */
+    .info-card {
       background: var(--card-bg);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 18px;
-      padding: 1.75rem;
+      border-radius: 20px;
+      padding: 2rem;
       backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      transition: border-color 0.2s ease, transform 0.2s ease;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
     }
 
-    .feature-card:hover {
-      border-color: var(--border-color);
-      transform: translateY(-3px);
+    .info-card:hover {
+      border-color: var(--border-glow);
+      background: var(--card-hover-bg);
+      transform: translateY(-4px);
     }
 
-    .feature-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
       background: rgba(0, 242, 254, 0.08);
       color: var(--accent-cyan);
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 1.25rem;
+      border: 1px solid rgba(0, 242, 254, 0.15);
     }
 
-    .feature-icon svg {
-      width: 22px;
-      height: 22px;
+    .card-icon svg {
+      width: 24px;
+      height: 24px;
     }
 
-    .feature-title {
-      font-size: 1.15rem;
+    .card-title {
+      font-size: 1.25rem;
       font-weight: 700;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
       color: #ffffff;
     }
 
-    .feature-desc {
-      font-size: 0.925rem;
+    .card-desc {
+      font-size: 0.95rem;
       color: var(--text-muted);
-      line-height: 1.5;
+      line-height: 1.6;
+    }
+
+    /* How It Works Steps */
+    .step-number {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Comparison / Why Helpful Table */
+    .benefit-banner {
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.05), rgba(79, 172, 254, 0.05));
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .benefit-content h3 {
+      font-size: 1.5rem;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+
+    .benefit-content p {
+      color: var(--text-muted);
+      font-size: 0.975rem;
+      line-height: 1.6;
+    }
+
+    .benefit-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .benefit-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .benefit-list svg {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-cyan);
+      flex-shrink: 0;
     }
 
     /* Footer */
     footer {
-      color: var(--text-muted);
-      font-size: 0.85rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 2.5rem;
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-dim);
+      font-size: 0.9rem;
       text-align: center;
-      margin-top: 1rem;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--accent-cyan);
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+      .hero-card {
+        padding: 2.5rem 1.5rem;
+      }
     }
   </style>
 </head>
@@ -280,23 +441,38 @@
   <div class="glow-orb-2"></div>
 
   <div class="wrapper">
+    <!-- Navbar -->
+    <nav>
+      <div class="nav-brand">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457-.39-2.823-1.07-4"></path>
+        </svg>
+        BioPrint
+      </div>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#why-bioprint">Why BioPrint</a></li>
+      </ul>
+      <a href="https://bioprint-eight.vercel.app/main" class="btn-enter" style="padding: 0.6rem 1.25rem; font-size: 0.875rem;">Launch Portal</a>
+    </nav>
+
     <!-- Hero Section -->
     <header class="hero-card">
-      <div class="logo-container">
-        <div class="logo-badge">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457-.39-2.823-1.07-4"></path>
-          </svg>
-        </div>
+      <div class="logo-badge">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457-.39-2.823-1.07-4"></path>
+        </svg>
       </div>
       
-      <span class="badge-pill">BioPrint Intelligence Platform</span>
-      <h1>Biometric Data Extraction & Processing</h1>
-      <p class="subtitle">Extract, analyze, and manage biometric identity structures seamlessly. Built for fast, precise data collection and cloud integration.</p>
+      <span class="badge-pill">BioPrint Platform v2.0</span>
+      <h1>Intelligent Identity Data Extraction & Management</h1>
+      <p class="hero-subtitle">Automate document scanning, extract structured identity records, and seamlessly pipe verified data into cloud databases with zero manual overhead.</p>
       
       <div class="cta-group">
-        <a href="https://bioprint-eight.vercel.app" class="btn-enter">
-          Enter Portal
+        <a href="https://bioprint-eight.vercel.app/main" class="btn-enter">
+          Enter Application Portal
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
           </svg>
@@ -304,41 +480,156 @@
       </div>
     </header>
 
-    <!-- Product Features -->
-    <section class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-        </div>
-        <h2 class="feature-title">Real-Time Extraction</h2>
-        <p class="feature-desc">Scan and extract complex identity profiles rapidly with low-latency parsing built straight into the browser workflow.</p>
+    <!-- About Product Section -->
+    <section id="about">
+      <div class="section-title">
+        <h2>What is BioPrint?</h2>
+        <p>A specialized engine designed for modern web environments</p>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-          </svg>
-        </div>
-        <h2 class="feature-title">Encrypted Storage</h2>
-        <p class="feature-desc">Integrated securely with modern cloud database backends to ensure end-to-end data safety and reliability.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-          </svg>
-        </div>
-        <h2 class="feature-title">Modular Workflows</h2>
-        <p class="feature-desc">Seamlessly structured routes to handle scanning, parsing, verification, and output formatting with ease.</p>
+      <div class="overview-card">
+        <p>
+          <strong>BioPrint</strong> is a lightweight, high-performance web solution designed to bridge the gap between physical identity verification and digital backend systems. Built specifically to handle document scanning, biometric record structuring, and rapid database syncing, BioPrint eliminates manual data entry errors.
+        </p>
+        <p style="margin-top: 1rem;">
+          By leveraging browser-optimized processing alongside Supabase infrastructure, BioPrint allows teams to instantly extract relevant text and data parameters, transform unstructured information into formatted JSON, and store records securely in real time.
+        </p>
       </div>
     </section>
 
+    <!-- How It Works Section -->
+    <section id="how-it-works">
+      <div class="section-title">
+        <h2>How To Use BioPrint</h2>
+        <p>Four simple steps to stream-line your data extraction pipeline</p>
+      </div>
+      <div class="grid-4">
+        <div class="info-card">
+          <div class="step-number">Step 01</div>
+          <h3 class="card-title">Launch Portal</h3>
+          <p class="card-desc">Click the "Enter" button to redirect directly to the live environment at <code>bioprint-eight.vercel.app/main</code>.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="step-number">Step 02</div>
+          <h3 class="card-title">Upload / Scan</h3>
+          <p class="card-desc">Input identity documents, image files, or data cards directly into the scanning interface.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="step-number">Step 03</div>
+          <h3 class="card-title">Auto Extraction</h3>
+          <p class="card-desc">The internal algorithm parses key information, structuring raw data into clean key-value parameters.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="step-number">Step 04</div>
+          <h3 class="card-title">Sync to Cloud</h3>
+          <p class="card-desc">Verify the parsed result and click submit to instantly append records to your secure Supabase database.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Features Section -->
+    <section id="features">
+      <div class="section-title">
+        <h2>Core Features</h2>
+        <p>Engineered for speed, efficiency, and developer flexibility</p>
+      </div>
+      <div class="grid-3">
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Ultra-Fast Processing</h3>
+          <p class="card-desc">Optimized client-side rendering ensures minimal lag during file upload, image parsing, and state updates.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Supabase Backend</h3>
+          <p class="card-desc">Direct database bindings ensure extracted records are instantly indexed into PostgreSQL with row-level security.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">High Accuracy Extraction</h3>
+          <p class="card-desc">Advanced text filtering removes noise and standardizes formatting prior to record submission.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Responsive UI</h3>
+          <p class="card-desc">Fully responsive layouts designed for seamless desktop scanning or mobile device camera inputs.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Developer Friendly</h3>
+          <p class="card-desc">Clean modular code architecture structured for rapid customization and seamless web performance.</p>
+        </div>
+
+        <div class="info-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h3 class="card-title">Privacy First</h3>
+          <p class="card-desc">Data processing is handled transiently without retaining unencrypted temporary state on client machines.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why BioPrint Section -->
+    <section id="why-bioprint">
+      <div class="benefit-banner">
+        <div class="benefit-content">
+          <h3>Why Use BioPrint?</h3>
+          <p>Manual data extraction is slow and prone to typographical errors. BioPrint streamlines the entire process into a single automated pipeline built for speed and reliability.</p>
+        </div>
+        <ul class="benefit-list">
+          <li>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Reduce processing time from minutes to seconds
+          </li>
+          <li>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Eliminate human copy-paste errors
+          </li>
+          <li>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Seamless web-first interface accessible on any modern browser
+          </li>
+          <li>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Optimized web performance and lightweight assets
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Footer -->
     <footer>
-      &copy; BioPrint Portal. Optimized for modern Web applications.
+      <p>&copy; BioPrint Portal. Designed & Optimized for Web Applications.</p>
+      <p><a href="https://bioprint-eight.vercel.app/main">BioPrint Medical Home</a></p>
     </footer>
   </div>
 
