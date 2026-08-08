@@ -1,14 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Correct Supabase Project URL
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://autdyccwpbxkgyzwlihg.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/**
- * Safely extracts and parses JSON from LLM responses.
- */
 function cleanAndParseJSON(rawText) {
   if (!rawText) throw new Error('Empty response received from LLM model.');
 
@@ -46,6 +37,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const SUPABASE_URL = process.env.SUPABASE_URL || '[https://autdyccwpbxkgyzwlihg.supabase.co](https://autdyccwpbxkgyzwlihg.supabase.co)';
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const body = req.body || {};
     const base64Image = body.base64Image;
     const fileName = body.fileName;
@@ -106,7 +101,7 @@ Return ONLY a raw JSON object matching this schema EXACTLY:
 
     if (!groqResponse.ok) {
       const errText = await groqResponse.text();
-      throw new Error(`Groq API error (${groqResponse.status}): ${errText}`);
+      return res.status(groqResponse.status).json({ error: `Groq API error (${groqResponse.status}): ${errText}` });
     }
 
     const groqData = await groqResponse.json();
@@ -131,7 +126,9 @@ Return ONLY a raw JSON object matching this schema EXACTLY:
       .select()
       .single();
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      return res.status(500).json({ error: `Supabase Error: ${dbError.message}` });
+    }
 
     return res.status(200).json({ success: true, data: record });
 
