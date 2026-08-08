@@ -1,1493 +1,476 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioPrint Vault v2.0 — Diagnostic Intelligence Engine</title>
-    
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <!-- DICOM Parsing Libraries -->
-    <script src="https://unpkg.com/dicom-parser@1.8.9/dist/dicomParser.min.js"></script>
-    <script src="https://unpkg.com/cornerstone-core@2.6.1/dist/cornerstone.min.js"></script>
-    <script src="https://unpkg.com/cornerstone-wado-image-loader@3.3.1/dist/cornerstoneWADOImageLoader.bundle.min.js"></script>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-dark: #030712;
-            --bg-surface: #0b1329;
-            --bg-card: rgba(17, 24, 39, 0.65);
-            --bg-card-hover: rgba(30, 41, 59, 0.75);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --border-bright: rgba(16, 185, 129, 0.35);
-            
-            --accent-emerald: #10b981;
-            --accent-cyan: #06b6d4;
-            --accent-rose: #f43f5e;
-            --accent-purple: #8b5cf6;
-            --accent-amber: #f59e0b;
-            --accent-blue: #3b82f6;
-            
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --text-subtle: #64748b;
-            
-            --font-main: 'Plus Jakarta Sans', sans-serif;
-            --font-code: 'JetBrains Mono', monospace;
-            
-            --shadow-glow: 0 0 35px rgba(16, 185, 129, 0.18);
-            --transition-speed: 0.25s;
-        }
-
-        body.e-ink-mode {
-            --bg-dark: #ffffff !important;
-            --bg-surface: #f1f5f9 !important;
-            --bg-card: #ffffff !important;
-            --bg-card-hover: #e2e8f0 !important;
-            --border-color: #000000 !important;
-            --border-bright: #000000 !important;
-            --text-main: #000000 !important;
-            --text-muted: #1e293b !important;
-            --text-subtle: #475569 !important;
-            --accent-emerald: #000000 !important;
-            --accent-cyan: #000000 !important;
-            --accent-rose: #000000 !important;
-            --accent-purple: #000000 !important;
-            --accent-amber: #000000 !important;
-            --accent-blue: #000000 !important;
-            background-image: none !important;
-            filter: grayscale(100%) contrast(150%);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
-
-        body {
-            font-family: var(--font-main);
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
-                radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
-        }
-
-        /* Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(3, 7, 18, 0.5); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-emerald); }
-
-        header {
-            background: rgba(11, 19, 41, 0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.85rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 100;
-            position: sticky;
-            top: 0;
-        }
-
-        .brand {
-            font-size: 1.25rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            letter-spacing: -0.02em;
-            cursor: pointer;
-        }
-
-        .brand-badge {
-            font-size: 0.65rem;
-            font-family: var(--font-code);
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid var(--accent-emerald);
-            color: var(--accent-emerald);
-            padding: 0.15rem 0.45rem;
-            border-radius: 0.375rem;
-            text-transform: uppercase;
-        }
-
-        /* Top Nav View Switcher (Dynamic Context Navigation) */
-        .view-switcher {
-            display: flex;
-            background: rgba(3, 7, 18, 0.6);
-            padding: 0.25rem;
-            border-radius: 0.6rem;
-            border: 1px solid var(--border-color);
-            gap: 0.25rem;
-            transition: all 0.3s ease;
-        }
-
-        .view-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            padding: 0.45rem 0.9rem;
-            border-radius: 0.4rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .view-btn:hover {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .view-btn.active {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-emerald);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            font-weight: 700;
-        }
-
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .btn {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.5rem 0.9rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            transition: all var(--transition-speed);
-        }
-
-        .btn:hover {
-            background: #1e293b;
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
-            color: #030712;
-            border: none;
-            font-weight: 700;
-        }
-
-        .btn-primary:hover {
-            opacity: 0.92;
-            box-shadow: var(--shadow-glow);
-        }
-
-        .btn-danger {
-            background: rgba(244, 63, 94, 0.15);
-            border-color: var(--accent-rose);
-            color: var(--accent-rose);
-        }
-
-        .btn-danger:hover {
-            background: var(--accent-rose);
-            color: #fff;
-        }
-
-        /* Container Layouts */
-        .app-container {
-            flex: 1;
-            max-width: 1400px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 1.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        /* Hero Upload View (Minimalist Initial Landing) */
-        #heroUploadSection {
-            min-height: calc(80vh - 120px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-            transition: all 0.4s ease;
-        }
-
-        .hero-title {
-            font-size: 2.25rem;
-            font-weight: 800;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, #ffffff 30%, var(--text-muted));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero-subtitle {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            max-width: 580px;
-            margin-bottom: 2.25rem;
-            line-height: 1.6;
-        }
-
-        .drop-zone-hero {
-            width: 100%;
-            max-width: 560px;
-            border: 2px dashed rgba(255, 255, 255, 0.18);
-            border-radius: 1.25rem;
-            padding: 3.5rem 2rem;
-            background: rgba(11, 19, 41, 0.4);
-            backdrop-filter: blur(20px);
-            cursor: pointer;
-            transition: all var(--transition-speed);
-            position: relative;
-        }
-
-        .drop-zone-hero:hover {
-            border-color: var(--accent-emerald);
-            background: rgba(16, 185, 129, 0.04);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-glow);
-        }
-
-        .drop-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            display: inline-block;
-        }
-
-        /* Documents Tab Bar (Active After Upload) */
-        .doc-bar {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: rgba(11, 19, 41, 0.6);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.75rem;
-            overflow-x: auto;
-        }
-
-        .doc-pill {
-            padding: 0.45rem 0.85rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: rgba(3, 7, 18, 0.5);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            white-space: nowrap;
-            transition: all var(--transition-speed);
-        }
-
-        .doc-pill.active {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-emerald);
-            border-color: var(--accent-emerald);
-        }
-
-        .doc-pill-add {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px dashed var(--border-color);
-            color: var(--text-main);
-        }
-
-        .doc-pill-add:hover {
-            border-color: var(--accent-cyan);
-            color: var(--accent-cyan);
-        }
-
-        /* Workspace Grid (Appears contextually after upload) */
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 1.5rem;
-        }
-
-        @media (max-width: 1024px) {
-            .workspace-grid { grid-template-columns: 1fr; }
-        }
-
-        .card-panel {
-            background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            padding: 1.25rem 1.5rem;
-            transition: all var(--transition-speed);
-        }
-
-        .card-panel:hover {
-            border-color: var(--border-bright);
-        }
-
-        .panel-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* AI Clinical Console */
-        .ai-console-box {
-            background: rgba(13, 17, 38, 0.85);
-            border: 1px solid rgba(139, 92, 246, 0.35);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.08);
-        }
-
-        .ai-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .ai-title {
-            font-size: 0.88rem;
-            font-weight: 700;
-            color: var(--accent-purple);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .ai-output-area {
-            font-size: 0.88rem;
-            line-height: 1.65;
-            color: var(--text-main);
-            white-space: pre-wrap;
-            background: rgba(3, 7, 18, 0.6);
-            padding: 1.15rem;
-            border-radius: 0.6rem;
-            border: 1px solid var(--border-color);
-            max-height: 280px;
-            overflow-y: auto;
-        }
-
-        /* Biomarker Vitals Grid */
-        .vitals-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 0.85rem;
-        }
-
-        .vital-card {
-            background: rgba(3, 7, 18, 0.5);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 0.85rem 1rem;
-            text-align: center;
-            transition: all var(--transition-speed);
-        }
-
-        .vital-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--border-bright);
-        }
-
-        .vital-card.status-high { border-left: 4px solid var(--accent-rose); }
-        .vital-card.status-normal { border-left: 4px solid var(--accent-emerald); }
-
-        .vital-val {
-            font-size: 1.35rem;
-            font-weight: 800;
-            font-family: var(--font-code);
-            margin: 0.25rem 0;
-        }
-
-        .vital-label {
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .vital-unit {
-            font-size: 0.65rem;
-            color: var(--text-subtle);
-        }
-
-        /* Elevated 3D Canvas Visualizer */
-        #anatomyCanvas {
-            width: 100%;
-            height: 380px;
-            border-radius: 0.85rem;
-            background: radial-gradient(circle at center, #0a1128 0%, #020617 100%);
-            border: 1px solid var(--border-color);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #anatomyCanvas canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-        }
-
-        .anatomy-controls {
-            position: absolute;
-            bottom: 12px;
-            left: 12px;
-            right: 12px;
-            display: flex;
-            justify-content: space-between;
-            gap: 0.5rem;
-            pointer-events: none;
-        }
-
-        .anatomy-chip {
-            background: rgba(3, 7, 18, 0.75);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--border-color);
-            padding: 0.35rem 0.65rem;
-            border-radius: 0.4rem;
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            font-family: var(--font-code);
-            pointer-events: auto;
-            cursor: pointer;
-        }
-
-        .anatomy-chip.active {
-            border-color: var(--accent-emerald);
-            color: var(--accent-emerald);
-        }
-
-        /* DICOM Canvas Container */
-        #dicomViewport {
-            width: 100%;
-            height: 260px;
-            background: #000;
-            border-radius: 0.6rem;
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Jargon Grid */
-        .jargon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .jargon-card {
-            background: rgba(11, 19, 41, 0.4);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 0.85rem;
-            font-size: 0.75rem;
-        }
-
-        .jargon-term {
-            color: var(--accent-cyan);
-            font-weight: 700;
-            font-family: var(--font-code);
-            margin-bottom: 0.25rem;
-        }
-
-        .jargon-desc {
-            color: var(--text-muted);
-            font-size: 0.7rem;
-            line-height: 1.45;
-        }
-
-        .urgency-badge {
-            font-size: 0.7rem;
-            font-weight: 800;
-            padding: 0.25rem 0.6rem;
-            border-radius: 0.375rem;
-            text-transform: uppercase;
-        }
-
-        .urgency-1 { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
-        .urgency-2 { background: rgba(6, 182, 212, 0.2); color: #06b6d4; border: 1px solid #06b6d4; }
-        .urgency-3 { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
-        .urgency-4, .urgency-5 { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border: 1px solid #f43f5e; }
-
-        .progress-bar-bg {
-            width: 100%;
-            height: 6px;
-            background: rgba(15, 23, 42, 0.8);
-            border-radius: 9999px;
-            overflow: hidden;
-            margin-top: 0.75rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
-            transition: width 0.25s ease;
-        }
-
-        .voice-active {
-            animation: pulse-ring 1.5s infinite;
-            background: rgba(244, 63, 94, 0.2) !important;
-            border-color: var(--accent-rose) !important;
-            color: var(--accent-rose) !important;
-        }
-
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
-            70% { box-shadow: 0 0 0 12px rgba(244, 63, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
-        }
-
-        .hidden { display: none !important; }
-
-        .log-entry {
-            font-family: var(--font-code);
-            font-size: 0.68rem;
-            color: var(--text-muted);
-            padding: 0.4rem 0.6rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .delta-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-            text-align: left;
-        }
-
-        .delta-table th, .delta-table td {
-            padding: 0.65rem 0.85rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .delta-table th {
-            color: var(--text-muted);
-            font-weight: 700;
-            text-transform: uppercase;
-            background: rgba(3, 7, 18, 0.5);
-        }
-
-        .delta-table td { font-family: var(--font-code); }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Health Analytics Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js for 3D Visualizations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    #canvas-container canvas { width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
+  </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <header>
-        <div class="brand" onclick="resetToHome()">
-            🧬 BioPrint Vault
-            <span class="brand-badge">v2.0 Native Vision</span>
-        </div>
-
-        <!-- Dynamic Context View Switcher (Hidden initially until upload) -->
-        <div id="headerNavSwitcher" class="view-switcher hidden">
-            <button id="navBtnAnalysis" class="view-btn active" onclick="switchMainView('analysis')">
-                <span>📋</span> Clinical Findings
-            </button>
-            <button id="navBtn3D" class="view-btn" onclick="switchMainView('3d')">
-                <span>🧠</span> 3D Organ Map
-            </button>
-            <button id="navBtnDelta" class="view-btn" onclick="switchMainView('delta')">
-                <span>📊</span> Delta Matrix
-            </button>
-            <button id="navBtnDicom" class="view-btn" onclick="switchMainView('dicom')">
-                <span>🩻</span> DICOM Suite
-            </button>
-            <button id="navBtnRx" class="view-btn" onclick="switchMainView('rx')">
-                <span>💊</span> RxNorm Lookups
-            </button>
-        </div>
-        
-        <div class="header-controls">
-            <button id="btnVoiceControl" class="btn" onclick="toggleVoiceControl()">
-                🎙️ Voice Commands
-            </button>
-            <button class="btn" onclick="exportFHIRJSON()">
-                💾 FHIR R4
-            </button>
-            <button class="btn" onclick="toggleEInkMode()">
-                🌗 E-Ink
-            </button>
-            <button class="btn btn-primary" onclick="showExportModal()">
-                📱 QR Sync
-            </button>
-        </div>
-    </header>
-
-    <div class="app-container">
-
-        <!-- 1. INITIAL LANDING / UPLOAD HUB (Zero Distraction) -->
-        <section id="heroUploadSection">
-            <h1 class="hero-title">Diagnostic Intelligence Vault</h1>
-            <p class="hero-subtitle">
-                Drop your medical PDF scans, laboratory reports, or DICOM image series below to unlock clinical synthesis, dynamic 3D anatomical mapping, and biomarker tracking.
-            </p>
-
-            <div class="drop-zone-hero" onclick="document.getElementById('fileInput').click()">
-                <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" multiple>
-                <div class="drop-icon">📄</div>
-                <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem;">Upload Diagnostic Report or PDF Scan</h3>
-                <p style="font-size: 0.78rem; color: var(--text-muted);">Supports Lab Sheets, Scans, Multi-page PDFs</p>
-            </div>
-
-            <div id="loader" class="hidden" style="width: 100%; max-width: 560px; margin-top: 1.5rem;">
-                <div style="display:flex; justify-content:space-between; font-size: 0.78rem; font-family: var(--font-code);">
-                    <span id="loaderStatus" style="color: var(--accent-cyan);">Processing Payload...</span>
-                    <span id="loaderPercent">0%</span>
-                </div>
-                <div class="progress-bar-bg">
-                    <div id="loaderBar" class="progress-bar-fill"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 2. ACTIVE WORKSPACE CONTAINER (Revealed Contextually After Upload) -->
-        <section id="activeWorkspace" class="hidden">
-
-            <!-- Active Document Multi-tab bar -->
-            <div class="doc-bar">
-                <div id="docPillsList" style="display: flex; gap: 0.5rem; overflow-x: auto;"></div>
-                <button class="doc-pill doc-pill-add" onclick="document.getElementById('fileInput').click()">
-                    <span>+ Add Report</span>
-                </button>
-            </div>
-
-            <!-- VIEW 1: Clinical Analysis Workspace -->
-            <div id="viewAnalysis" class="workspace-view">
-                <div class="workspace-grid">
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        <!-- AI Clinical Console -->
-                        <div class="ai-console-box">
-                            <div class="ai-header">
-                                <div class="ai-title">
-                                    🤖 Groq Vision AI Clinical Synthesis
-                                    <span id="urgencyBadgeContainer"></span>
-                                </div>
-                                <div id="doctorFlagContainer"></div>
-                            </div>
-                            <div id="aiAnalysisOutput" class="ai-output-area">Upload an image or document to view extracted findings...</div>
-                        </div>
-
-                        <!-- Vitals Grid -->
-                        <div class="card-panel">
-                            <div class="panel-title">Extracted Biomarkers & Metrics</div>
-                            <div id="vitalsGrid" class="vitals-grid"></div>
-                        </div>
-
-                        <!-- Jargon Translation Map -->
-                        <div class="card-panel">
-                            <div class="panel-title">Medical Terminology Translator</div>
-                            <div id="jargonMapGrid" class="jargon-grid"></div>
-                        </div>
-                    </div>
-
-                    <!-- Right Metadata Sidebar -->
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        <div class="card-panel">
-                            <div class="panel-title">Payload SHA-256 Hash</div>
-                            <div id="hashDisplay" style="font-family: var(--font-code); font-size: 0.68rem; color: var(--accent-cyan); word-break: break-all; background: rgba(3,7,18,0.6); padding:0.75rem; border-radius:0.5rem; border: 1px solid var(--border-color);">
-                                Hash generated upon file drop.
-                            </div>
-                        </div>
-
-                        <div class="card-panel">
-                            <div class="panel-title">Supabase Database Record</div>
-                            <div id="documentTextDisplay" style="font-family: var(--font-code); font-size: 0.7rem; color: var(--text-muted); white-space: pre-wrap; max-height: 260px; overflow-y: auto; background: rgba(3,7,18,0.7); padding: 0.85rem; border-radius: 0.5rem; border: 1px solid var(--border-color); line-height: 1.5;"></div>
-                        </div>
-
-                        <div class="card-panel">
-                            <div class="panel-title">Audit Trail Log</div>
-                            <div id="hashHistory" style="min-height: 120px; background: rgba(3,7,18,0.4); border: 1px solid var(--border-color); border-radius: 0.5rem; overflow-y: auto;">
-                                <div class="log-entry">
-                                    <span>[SYS] Route /api/groq.js Ready</span>
-                                    <span class="log-timestamp">00:00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 2: Dynamic 3D Anatomical Organ Map -->
-            <div id="view3D" class="workspace-view hidden">
-                <div class="workspace-grid">
-                    <div class="card-panel">
-                        <div class="panel-title">
-                            <span>Interactive 3D Anatomical Visualizer</span>
-                            <span style="font-size: 0.65rem; color: var(--accent-emerald);">WebGL Hardware Accelerated</span>
-                        </div>
-                        <div id="anatomyCanvas">
-                            <div class="anatomy-controls">
-                                <span class="anatomy-chip active" onclick="set3DFocusNode('all')">Full System</span>
-                                <span class="anatomy-chip" onclick="set3DFocusNode('cardio')">Cardiovascular</span>
-                                <span class="anatomy-chip" onclick="set3DFocusNode('pulm')">Pulmonary</span>
-                                <span class="anatomy-chip" onclick="set3DFocusNode('hepatic')">Hepatic / Renal</span>
-                            </div>
-                        </div>
-                        <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.85rem; line-height: 1.5;">
-                            Drag to rotate anatomical model. Color spectrum and geometric aura adjust automatically based on extracted report anomalies.
-                        </p>
-                    </div>
-
-                    <div class="card-panel">
-                        <div class="panel-title">Active Anatomical Anomaly Flags</div>
-                        <div id="organNodeList" style="display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.75rem;">
-                            <div style="color: var(--text-subtle);">No active anomalies flagged in target document.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 3: Longitudinal Delta Matrix -->
-            <div id="viewDelta" class="workspace-view hidden">
-                <div class="card-panel">
-                    <div class="panel-title">Cross-Report Biomarker Delta Stream</div>
-                    <div id="deltaMatrixContainer" style="overflow-x: auto;">
-                        <div style="font-size: 0.75rem; color: var(--text-subtle); text-align: center; padding: 2rem 0;">
-                            Ingest multiple reports to calculate longitudinal trend matrix.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 4: DICOM Engine -->
-            <div id="viewDicom" class="workspace-view hidden">
-                <div class="workspace-grid">
-                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                        <div id="dicomDropZone" class="drop-zone-hero" style="padding: 2rem; border-color: var(--accent-purple);">
-                            <input type="file" id="dicomFileInput" accept=".dcm,application/dicom" class="hidden" multiple>
-                            <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🩻</div>
-                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--accent-purple);">Load DICOM Series (.dcm)</h3>
-                            <p style="font-size: 0.72rem; color: var(--text-muted);">Click to browse or drop DICOM slices</p>
-                        </div>
-
-                        <div class="card-panel">
-                            <div class="panel-title">DICOM Canvas Viewport</div>
-                            <div id="dicomViewport">
-                                <span id="dicomPlaceholder" style="font-size: 0.75rem; color: var(--text-subtle);">No DICOM series loaded</span>
-                                <canvas id="dicomCanvas" class="hidden"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-panel">
-                        <div class="panel-title">Slice Selector Controls</div>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <label style="font-size: 0.72rem; color: var(--text-muted);">Slice Index: <span id="sliceNum" style="font-family: var(--font-code);">0 / 0</span></label>
-                                <input type="range" id="sliceRange" min="1" max="1" value="1" style="width: 100%; margin-top: 0.5rem;" oninput="changeDicomSlice(this.value)" disabled>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW 5: RxNorm Interaction Engine -->
-            <div id="viewRx" class="workspace-view hidden">
-                <div class="workspace-grid">
-                    <div class="card-panel">
-                        <div class="panel-title">NIH RxNorm Contraindication Engine</div>
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <input type="text" id="rxInput" placeholder="Enter Drug Name (e.g. Metformin, Lisinopril)" style="width: 100%; padding: 0.75rem; border-radius: 0.5rem; background: rgba(3,7,18,0.8); border: 1px solid var(--border-color); color: #fff; font-size: 0.8rem;">
-                            <button class="btn btn-primary" style="justify-content: center;" onclick="checkRxInteraction()">Query NIH Interactions</button>
-                        </div>
-                    </div>
-
-                    <div class="card-panel">
-                        <div class="panel-title">Interaction Findings</div>
-                        <div id="rxResults" style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;">
-                            Enter a medication above to querycontraindications against extracted biomarkers.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold text-lg">HA</div>
+      <h1 class="text-xl font-bold text-slate-900">HealthAnalytics</h1>
     </div>
+    <button id="sidebar-toggle" onclick="toggleSidebar()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition">
+      ☰ Menu & Tools
+    </button>
+  </header>
 
-    <!-- Export QR Modal -->
-    <div id="qrModal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 200;">
-        <div class="card-panel" style="width: 320px; text-align: center; padding: 2rem;">
-            <div class="panel-title" style="justify-content: center; margin-bottom: 1rem;">Mobile Vault Sync</div>
-            <div id="qrcode" style="display: flex; justify-content: center; background: #fff; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;"></div>
-            <button class="btn btn-danger" style="width: 100%; justify-content: center;" onclick="hideExportModal()">Close Sync</button>
-        </div>
+  <!-- Sliding Sidebar -->
+  <aside id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-white border-l border-slate-200 shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 p-6 flex flex-col">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-lg font-bold text-slate-900">Tools & Info</h2>
+      <button onclick="toggleSidebar()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
     </div>
+    <div class="space-y-4 flex-1">
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <h3 class="text-sm font-semibold text-slate-700">Quick Status</h3>
+        <p class="text-xs text-slate-500 mt-1" id="sidebar-status">No PDF uploaded yet.</p>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+        <h3 class="text-sm font-semibold text-slate-700">Help & Instructions</h3>
+        <p class="text-xs text-slate-500 mt-1">Upload your medical PDF report to generate structured insights, 3D organ visualizations, and medication checks.</p>
+      </div>
+    </div>
+    <button onclick="resetApp()" class="w-full py-2 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 text-sm transition">
+      Start Over
+    </button>
+  </aside>
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm hidden z-40"></div>
 
-    <script>
-    // App State Engine
-    const AppState = {
-        documents: [],
-        activeDocId: null,
-        activeView: 'analysis',
-        dicomSlices: [],
-        currentSliceIndex: 0,
-        voiceActive: false,
-        speechRecognition: null,
-        threeScene: null,
-        threeCamera: null,
-        threeRenderer: null,
-        organGroup: null,
-        coreMesh: null,
-        wireMesh: null,
-        isMouseDown: false,
-        mouseX: 0,
-        mouseY: 0
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col justify-center">
+
+    <!-- STEP 1: PDF Upload -->
+    <section id="view-upload" class="view-section active text-center">
+      <div class="bg-white p-10 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto">
+        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+          📄
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Upload Medical Report</h2>
+        <p class="text-slate-500 text-sm mb-6">Select your PDF document to process health data and metrics.</p>
+
+        <label class="block w-full border-2 border-dashed border-slate-300 rounded-xl p-8 hover:border-indigo-500 cursor-pointer transition bg-slate-50/50 hover:bg-indigo-50/30">
+          <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="handleFileUpload(event)" />
+          <span class="text-sm font-medium text-slate-600 block">Click to upload PDF report</span>
+          <span class="text-xs text-slate-400 block mt-1">PDF files up to 10MB</span>
+        </label>
+
+        <div class="mt-6 flex items-center justify-center space-x-2 text-xs text-slate-400">
+          <span>Or test immediately:</span>
+          <button onclick="loadDemoData()" class="text-indigo-600 font-semibold hover:underline">Load Demo Report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: Main Choice Selection Menu -->
+    <section id="view-selection" class="view-section">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-slate-900">What would you like to explore?</h2>
+        <p class="text-slate-500 text-sm mt-1">Select an option below to view details from your report.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Option 1: AI Report -->
+        <button onclick="showView('view-report')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 text-xl">📊</div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">AI Report</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">Read a clear, simplified summary of your key health metrics and findings.</p>
+          </div>
+          <span class="mt-6 text-sm font-semibold text-blue-600">Open Report &rarr;</span>
+        </button>
+
+        <!-- Option 2: 3D Organ Map -->
+        <button onclick="showView('view-3d')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4 text-xl">🫀</div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">3D Organ View</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">See an interactive 3D model highlighting organ status based on your data.</p>
+          </div>
+          <span class="mt-6 text-sm font-semibold text-purple-600">Open 3D Model &rarr;</span>
+        </button>
+
+        <!-- Option 3: Med Check -->
+        <button onclick="showView('view-meds')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-xl">💊</div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Medication Check</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">Check if specific medications are suitable or may cause interactions.</p>
+          </div>
+          <span class="mt-6 text-sm font-semibold text-emerald-600">Check Medications &rarr;</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 3A: Dedicated AI Report View -->
+    <section id="view-report" class="view-section">
+      <div class="mb-6">
+        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+          &larr; Back to Options
+        </button>
+        <h2 class="text-2xl font-bold text-slate-900">Customized AI Health Report</h2>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Executive Summary</h3>
+          <p id="report-summary" class="text-slate-700 leading-relaxed text-sm">Processing report data...</p>
+        </div>
+
+        <hr class="border-slate-100" />
+
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Key Biomarkers</h3>
+          <div id="biomarker-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Dynamically injected -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3B: Dedicated 3D Organ View -->
+    <section id="view-3d" class="view-section">
+      <div class="mb-6 flex justify-between items-end">
+        <div>
+          <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+            &larr; Back to Options
+          </button>
+          <h2 class="text-2xl font-bold text-slate-900">3D Organ Health Model</h2>
+        </div>
+        <div class="text-xs text-slate-500">Click & Drag to rotate visualization</div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-slate-900 rounded-2xl overflow-hidden h-[450px] relative shadow-inner">
+          <div id="canvas-container" class="w-full h-full"></div>
+          <div class="absolute bottom-4 left-4 right-4 flex justify-center gap-4 bg-slate-800/80 backdrop-blur-md py-2 px-4 rounded-xl text-xs text-slate-300">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Normal</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Monitor</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Attention</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 mb-4">Organ Status Breakdown</h3>
+            <div id="organ-status-list" class="space-y-3 text-xs">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
+            Organ indicators are generated dynamically from analyzed biomarker values.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3C: Dedicated Medication Check View -->
+    <section id="view-meds" class="view-section">
+      <div class="mb-6">
+        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+          &larr; Back to Options
+        </button>
+        <h2 class="text-2xl font-bold text-slate-900">Medication Safety Check</h2>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+        <div class="max-w-md">
+          <label for="med-search" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Check Specific Medication</label>
+          <div class="flex gap-2">
+            <input type="text" id="med-search" placeholder="Enter drug name (e.g., Metformin, Ibuprofen)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
+            <button onclick="checkMedication()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Check</button>
+          </div>
+        </div>
+
+        <div id="med-results" class="hidden rounded-xl p-4 border text-sm">
+          <!-- Dynamic check output -->
+        </div>
+
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Report Interaction Assessment</h3>
+          <div id="med-list" class="space-y-3">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // State Management
+    let healthData = {
+      summary: "",
+      biomarkers: [],
+      organs: [],
+      medications: []
     };
 
-    if (typeof pdfjsLib !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    let scene, camera, renderer, organGroup;
+    let isThreeInitialized = false;
+
+    // View Navigation Router
+    function showView(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+
+      if (viewId === 'view-3d') {
+        setTimeout(() => {
+          if (!isThreeInitialized) {
+            init3DScene();
+          } else {
+            onWindowResize();
+          }
+        }, 50);
+      }
     }
 
-    if (typeof cornerstoneWADOImageLoader !== 'undefined') {
-        cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-        cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+    // Sidebar Handler
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isHidden = sidebar.classList.contains('translate-x-full');
+      
+      if (isHidden) {
+        sidebar.classList.remove('translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('translate-x-full');
+        overlay.classList.add('hidden');
+      }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-        setupFileUploadHandlers();
-        setupDicomHandlers();
-        initUpgraded3DAnatomyEngine();
-        initSpeechRecognition();
-    });
-
-    function resetToHome() {
-        if (AppState.documents.length === 0) {
-            document.getElementById('heroUploadSection').classList.remove('hidden');
-            document.getElementById('activeWorkspace').classList.add('hidden');
-            document.getElementById('headerNavSwitcher').classList.add('hidden');
-        }
+    // Mock Upload / Data Loading
+    function handleFileUpload(e) {
+      if (e.target.files.length > 0) {
+        loadDemoData();
+      }
     }
 
-    function switchMainView(viewName) {
-        AppState.activeView = viewName;
-        const views = ['analysis', '3d', 'delta', 'dicom', 'rx'];
+    function loadDemoData() {
+      healthData = {
+        summary: "Patient analysis indicates normal metabolic function with slightly elevated liver enzyme markers (ALT) and blood glucose. Cardiovascular metrics remain in healthy ranges.",
+        biomarkers: [
+          { name: "Fasting Blood Sugar", value: "108 mg/dL", status: "elevated", note: "Slightly above normal target (70-99 mg/dL)" },
+          { name: "ALT (Liver Enzyme)", value: "48 U/L", status: "elevated", note: "Mild elevation noted" },
+          { name: "Total Cholesterol", value: "185 mg/dL", status: "normal", note: "Optimal range (<200 mg/dL)" },
+          { name: "eGFR (Kidney Function)", value: "95 mL/min", status: "normal", note: "Healthy renal filtration" }
+        ],
+        organs: [
+          { name: "Heart", status: "normal", color: 0x34d399, info: "Optimal rhythm and pressure indicators." },
+          { name: "Liver", status: "attention", color: 0xf43f5e, info: "Mild elevation in enzyme metrics detected." },
+          { name: "Kidneys", status: "normal", color: 0x34d399, info: "Filtration rates within normal index." },
+          { name: "Lungs", status: "normal", color: 0x34d399, info: "Oxygenation levels standard." },
+          { name: "Brain", status: "monitor", color: 0xfacc15, info: "Standard neurological response profile." }
+        ],
+        medications: [
+          { name: "Metformin", compatibility: "Safe", detail: "Suitable given current glucose levels." },
+          { name: "Ibuprofen", compatibility: "Caution", detail: "Frequent high doses may strain elevated liver parameters." }
+        ]
+      };
+
+      populateUI();
+      document.getElementById('sidebar-status').textContent = "Report active: Demo_Patient_Data.pdf";
+      showView('view-selection');
+    }
+
+    function populateUI() {
+      // Populate Report
+      document.getElementById('report-summary').textContent = healthData.summary;
+      const bContainer = document.getElementById('biomarker-list');
+      bContainer.innerHTML = healthData.biomarkers.map(b => `
+        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-start">
+          <div>
+            <div class="text-sm font-semibold text-slate-800">${b.name}</div>
+            <div class="text-xs text-slate-500 mt-0.5">${b.note}</div>
+          </div>
+          <span class="text-xs font-bold px-2 py-1 rounded ${b.status === 'normal' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${b.value}</span>
+        </div>
+      `).join('');
+
+      // Populate 3D Breakdown List
+      const oContainer = document.getElementById('organ-status-list');
+      oContainer.innerHTML = healthData.organs.map(o => `
+        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div>
+            <span class="font-bold text-slate-800">${o.name}</span>
+            <p class="text-slate-500 text-[11px] mt-0.5">${o.info}</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #${o.color.toString(16).padStart(6, '0')}"></span>
+        </div>
+      `).join('');
+
+      // Populate Medications
+      const mContainer = document.getElementById('med-list');
+      mContainer.innerHTML = healthData.medications.map(m => `
+        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-800 text-sm">${m.name}</span>
+            <p class="text-xs text-slate-500 mt-0.5">${m.detail}</p>
+          </div>
+          <span class="text-xs font-bold px-2.5 py-1 rounded ${m.compatibility === 'Safe' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${m.compatibility}</span>
+        </div>
+      `).join('');
+    }
+
+    function checkMedication() {
+      const input = document.getElementById('med-search').value.trim();
+      const res = document.getElementById('med-results');
+
+      if (!input) return;
+
+      res.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'bg-amber-50', 'border-amber-200');
+
+      if (input.toLowerCase().includes('ibuprofen') || input.toLowerCase().includes('tylenol')) {
+        res.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
+        res.innerHTML = `<strong>Caution for ${input}:</strong> Processed by liver/kidneys. Monitor use against elevated liver biomarkers.`;
+      } else {
+        res.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+        res.innerHTML = `<strong>No major flags detected for ${input}:</strong> Appears compatible based on parsed health metrics.`;
+      }
+    }
+
+    function resetApp() {
+      healthData = { summary: "", biomarkers: [], organs: [], medications: [] };
+      document.getElementById('sidebar-status').textContent = "No PDF uploaded yet.";
+      toggleSidebar();
+      showView('view-upload');
+    }
+
+    // 3D Scene Initialization
+    function init3DScene() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(0, 0, 8);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.appendChild(renderer.domElement);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7);
+      scene.add(dirLight);
+
+      organGroup = new THREE.Group();
+
+      // Representational Organ Mesh Constructs
+      const organNodes = healthData.organs.length > 0 ? healthData.organs : [
+        { name: "Brain", color: 0x34d399, pos: [0, 2, 0], scale: [0.6, 0.5, 0.6] },
+        { name: "Lungs", color: 0x34d399, pos: [0, 0.9, 0], scale: [1.1, 0.7, 0.5] },
+        { name: "Heart", color: 0x34d399, pos: [-0.2, 0.8, 0.3], scale: [0.4, 0.4, 0.4] },
+        { name: "Liver", color: 0xf43f5e, pos: [0.4, 0.1, 0.1], scale: [0.7, 0.4, 0.5] },
+        { name: "Kidneys", color: 0x34d399, pos: [0, -0.7, -0.1], scale: [0.9, 0.3, 0.4] }
+      ];
+
+      const offsets = [
+        { pos: [0, 1.8, 0], scale: [0.6, 0.5, 0.6] },   // Brain
+        { pos: [0, 0.8, 0], scale: [1.0, 0.6, 0.5] },   // Lungs
+        { pos: [-0.2, 0.7, 0.2], scale: [0.35, 0.35, 0.35] }, // Heart
+        { pos: [0.4, 0.0, 0.1], scale: [0.6, 0.4, 0.5] }, // Liver
+        { pos: [0, -0.8, -0.1], scale: [0.8, 0.3, 0.4] }  // Kidneys
+      ];
+
+      organNodes.forEach((data, i) => {
+        const geom = new THREE.SphereGeometry(0.8, 32, 32);
+        const mat = new THREE.MeshStandardMaterial({
+          color: data.color,
+          roughness: 0.3,
+          metalness: 0.1
+        });
+        const mesh = new THREE.Mesh(geom, mat);
         
-        views.forEach(v => {
-            const el = document.getElementById(`view${v.charAt(0).toUpperCase() + v.slice(1)}`);
-            const btn = document.getElementById(`navBtn${v.charAt(0).toUpperCase() + v.slice(1)}`);
-            if (el) el.classList.add('hidden');
-            if (btn) btn.classList.remove('active');
-        });
-
-        const activeEl = document.getElementById(`view${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`);
-        const activeBtn = document.getElementById(`navBtn${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`);
-        
-        if (activeEl) activeEl.classList.remove('hidden');
-        if (activeBtn) activeBtn.classList.add('active');
-
-        if (viewName === '3d') {
-            setTimeout(onWindowResize3D, 50);
-        }
-    }
-
-    function setupFileUploadHandlers() {
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                Array.from(e.target.files).forEach(file => processUploadedFile(file));
-            }
-        });
-    }
-
-    function setupDicomHandlers() {
-        const dicomDropZone = document.getElementById('dicomDropZone');
-        const dicomFileInput = document.getElementById('dicomFileInput');
-
-        if (dicomDropZone && dicomFileInput) {
-            dicomDropZone.addEventListener('click', () => dicomFileInput.click());
-            dicomFileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    processDicomFiles(Array.from(e.target.files));
-                }
-            });
-        }
-    }
-
-    async function processDicomFiles(files) {
-        AppState.dicomSlices = [];
-        for (const file of files) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const byteArray = new Uint8Array(arrayBuffer);
-                let dataset = typeof dicomParser !== 'undefined' ? dicomParser.parseDicom(byteArray) : null;
-
-                AppState.dicomSlices.push({
-                    file: file,
-                    dataset: dataset,
-                    arrayBuffer: arrayBuffer
-                });
-            } catch (err) {
-                console.error('DICOM parsing error:', err);
-            }
-        }
-
-        if (AppState.dicomSlices.length > 0) {
-            const range = document.getElementById('sliceRange');
-            range.min = 1;
-            range.max = AppState.dicomSlices.length;
-            range.value = 1;
-            range.disabled = false;
-            document.getElementById('sliceNum').innerText = `1 / ${AppState.dicomSlices.length}`;
-            renderDicomSlice(0);
-        }
-    }
-
-    function renderDicomSlice(index) {
-        if (!AppState.dicomSlices[index]) return;
-        const slice = AppState.dicomSlices[index];
-        const canvas = document.getElementById('dicomCanvas');
-        const placeholder = document.getElementById('dicomPlaceholder');
-        const ctx = canvas.getContext('2d');
-
-        placeholder.classList.add('hidden');
-        canvas.classList.remove('hidden');
-        canvas.width = 240;
-        canvas.height = 240;
-
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#10b981';
-        ctx.font = '12px JetBrains Mono';
-        ctx.textAlign = 'center';
-        ctx.fillText(`DICOM Slice #${index + 1}`, canvas.width / 2, canvas.height / 2 - 10);
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '10px Plus Jakarta Sans';
-        ctx.fillText(slice.file.name.substring(0, 25), canvas.width / 2, canvas.height / 2 + 15);
-    }
-
-    function changeDicomSlice(val) {
-        const index = parseInt(val, 10) - 1;
-        AppState.currentSliceIndex = index;
-        document.getElementById('sliceNum').innerText = `${val} / ${AppState.dicomSlices.length}`;
-        renderDicomSlice(index);
-    }
-
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-
-    async function pdfPageToBase64(arrayBuffer) {
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        return canvas.toDataURL('image/png');
-    }
-
-    async function processUploadedFile(file) {
-        showLoader(true, 'Generating Payload SHA-256...', 20);
-
-        try {
-            const buffer = await file.arrayBuffer();
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            document.getElementById('hashDisplay').innerText = `SHA-256: ${hashHex}`;
-            logAuditEntry(file.name, hashHex);
-
-            showLoader(true, 'Converting Document Frame...', 45);
-
-            let base64Image = file.type === 'application/pdf' || file.name.endsWith('.pdf') 
-                ? await pdfPageToBase64(buffer) 
-                : await fileToBase64(file);
-
-            showLoader(true, 'Executing Vision AI via /api/groq.js...', 70);
-
-            // POST DIRECTLY TO /api/groq.js ENDPOINT
-            const response = await fetch('/api/groq.js', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64Image: base64Image, fileName: file.name })
-            });
-
-            const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.error || `HTTP ${response.status} Error`);
-
-            showLoader(true, 'Updating Supabase Database Records...', 90);
-
-            const dbData = result.data;
-            const docId = 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-            const newDoc = {
-                id: docId,
-                name: dbData.file_name || file.name,
-                hash: hashHex,
-                summary: dbData.summary,
-                urgency: dbData.urgency_rating,
-                jargon: dbData.jargon_map || {},
-                vitals: dbData.vitals || [],
-                requiresDoctor: dbData.requires_doctor_flag,
-                dbRecord: dbData,
-                timestamp: new Date().toLocaleTimeString()
-            };
-
-            AppState.documents.push(newDoc);
-            showLoader(true, 'Analysis Complete', 100);
-
-            setTimeout(() => {
-                showLoader(false);
-                revealWorkspace();
-                addDocumentPill(newDoc);
-                switchActiveDocument(docId);
-                updateDeltaMatrix();
-                update3DOrganHighlights();
-            }, 300);
-
-        } catch (err) {
-            alert('Processing Error: ' + err.message);
-            showLoader(false);
-        }
-    }
-
-    function revealWorkspace() {
-        document.getElementById('heroUploadSection').classList.add('hidden');
-        document.getElementById('activeWorkspace').classList.remove('hidden');
-        document.getElementById('headerNavSwitcher').classList.remove('hidden');
-    }
-
-    function addDocumentPill(doc) {
-        const container = document.getElementById('docPillsList');
-        const pill = document.createElement('div');
-        pill.className = 'doc-pill';
-        pill.id = `pill_${doc.id}`;
-        pill.innerHTML = `<span>📄 ${doc.name}</span><span style="font-size:0.65rem; color:var(--text-subtle);">${doc.timestamp}</span>`;
-        pill.onclick = () => switchActiveDocument(doc.id);
-        container.appendChild(pill);
-    }
-
-    function switchActiveDocument(docId) {
-        AppState.activeDocId = docId;
-        const doc = AppState.documents.find(d => d.id === docId);
-
-        document.querySelectorAll('.doc-pill').forEach(p => p.classList.remove('active'));
-        const activePill = document.getElementById(`pill_${docId}`);
-        if (activePill) activePill.classList.add('active');
-
-        if (!doc) return;
-
-        document.getElementById('aiAnalysisOutput').innerText = doc.summary || "No clinical summary generated.";
-
-        const badgeContainer = document.getElementById('urgencyBadgeContainer');
-        badgeContainer.innerHTML = `<span class="urgency-badge urgency-${doc.urgency || 1}">Urgency ${doc.urgency || 1}/5</span>`;
-
-        const flagContainer = document.getElementById('doctorFlagContainer');
-        if (doc.requiresDoctor) {
-            flagContainer.innerHTML = `<span style="font-size: 0.72rem; color: var(--accent-rose); font-weight: 700; background: rgba(244,63,94,0.15); padding: 0.35rem 0.65rem; border-radius: 0.375rem; border: 1px solid var(--accent-rose);">⚠️ Physician Consultation Recommended</span>`;
-        } else {
-            flagContainer.innerHTML = `<span style="font-size: 0.72rem; color: var(--accent-emerald); font-weight: 700;">✅ Standard Findings</span>`;
-        }
-
-        const grid = document.getElementById('vitalsGrid');
-        grid.innerHTML = '';
-        if (doc.vitals && doc.vitals.length > 0) {
-            doc.vitals.forEach(v => {
-                const statusClass = v.isAnomaly ? 'status-high' : 'status-normal';
-                const card = document.createElement('div');
-                card.className = `vital-card ${statusClass}`;
-                card.innerHTML = `
-                    <div class="vital-label">${v.metric || 'Metric'}</div>
-                    <div class="vital-val">${v.value}</div>
-                    <div class="vital-unit">${v.unit || ''} ${v.isAnomaly ? '(Anomaly)' : ''}</div>
-                `;
-                grid.appendChild(card);
-            });
-        } else {
-            grid.innerHTML = `<div style="font-size:0.75rem; color:var(--text-subtle);">No vitals parsed.</div>`;
-        }
-
-        const jargonGrid = document.getElementById('jargonMapGrid');
-        jargonGrid.innerHTML = '';
-        const jargonKeys = Object.keys(doc.jargon || {});
-        if (jargonKeys.length > 0) {
-            jargonKeys.forEach(term => {
-                const card = document.createElement('div');
-                card.className = 'jargon-card';
-                card.innerHTML = `
-                    <div class="jargon-term">${term}</div>
-                    <div class="jargon-desc">${doc.jargon[term]}</div>
-                `;
-                jargonGrid.appendChild(card);
-            });
-        } else {
-            jargonGrid.innerHTML = `<div style="font-size:0.75rem; color:var(--text-subtle);">No medical jargon required translation.</div>`;
-        }
-
-        document.getElementById('documentTextDisplay').innerText = JSON.stringify(doc.dbRecord, null, 2);
-    }
-
-    // ELEVATED 3D ANATOMICAL ENGINE
-    function initUpgraded3DAnatomyEngine() {
-        const container = document.getElementById('anatomyCanvas');
-        if (!container) return;
-
-        const width = container.clientWidth || 400;
-        const height = container.clientHeight || 380;
-
-        AppState.threeScene = new THREE.Scene();
-        AppState.threeCamera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        
-        AppState.threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        AppState.threeRenderer.setSize(width, height);
-        AppState.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        container.appendChild(AppState.threeRenderer.domElement);
-
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        AppState.threeScene.add(ambientLight);
-
-        const pointLight = new THREE.PointLight(0x10b981, 2, 50);
-        pointLight.position.set(5, 5, 5);
-        AppState.threeScene.add(pointLight);
-
-        const blueLight = new THREE.PointLight(0x06b6d4, 1.5, 50);
-        blueLight.position.set(-5, -5, -5);
-        AppState.threeScene.add(blueLight);
-
-        // Group container
-        AppState.organGroup = new THREE.Group();
-
-        // Core Anatomical Metallic Mesh
-        const geometry = new THREE.IcosahedronGeometry(1.2, 3);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x10b981, 
-            roughness: 0.3,
-            metalness: 0.8,
-            wireframe: false
-        });
-        AppState.coreMesh = new THREE.Mesh(geometry, material);
-        AppState.organGroup.add(AppState.coreMesh);
-
-        // External Wireframe Aura
-        const wireGeo = new THREE.IcosahedronGeometry(1.4, 2);
-        const wireMat = new THREE.MeshBasicMaterial({
-            color: 0x06b6d4,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.25
-        });
-        AppState.wireMesh = new THREE.Mesh(wireGeo, wireMat);
-        AppState.organGroup.add(AppState.wireMesh);
-
-        AppState.threeScene.add(AppState.organGroup);
-        AppState.threeCamera.position.z = 4.2;
-
-        // Interaction Handling (Mouse Drag to Rotate)
-        container.addEventListener('mousedown', (e) => {
-            AppState.isMouseDown = true;
-            AppState.mouseX = e.clientX;
-            AppState.mouseY = e.clientY;
-        });
-
-        window.addEventListener('mouseup', () => AppState.isMouseDown = false);
-
-        container.addEventListener('mousemove', (e) => {
-            if (!AppState.isMouseDown) return;
-            const deltaX = e.clientX - AppState.mouseX;
-            const deltaY = e.clientY - AppState.mouseY;
-
-            AppState.organGroup.rotation.y += deltaX * 0.008;
-            AppState.organGroup.rotation.x += deltaY * 0.008;
-
-            AppState.mouseX = e.clientX;
-            AppState.mouseY = e.clientY;
-        });
-
-        // Continuous Render Loop
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!AppState.isMouseDown && AppState.organGroup) {
-                AppState.organGroup.rotation.y += 0.005;
-                AppState.wireMesh.rotation.z -= 0.003;
-            }
-            AppState.threeRenderer.render(AppState.threeScene, AppState.threeCamera);
-        }
-        animate();
-
-        window.addEventListener('resize', onWindowResize3D);
-    }
-
-    function set3DFocusNode(type) {
-        document.querySelectorAll('.anatomy-chip').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
-
-        if (!AppState.coreMesh) return;
-
-        if (type === 'cardio') {
-            AppState.coreMesh.material.color.setHex(0xf43f5e);
-        } else if (type === 'pulm') {
-            AppState.coreMesh.material.color.setHex(0x06b6d4);
-        } else if (type === 'hepatic') {
-            AppState.coreMesh.material.color.setHex(0xf59e0b);
-        } else {
-            AppState.coreMesh.material.color.setHex(0x10b981);
-        }
-    }
-
-    function onWindowResize3D() {
-        const container = document.getElementById('anatomyCanvas');
-        if (!container || !AppState.threeRenderer || !AppState.threeCamera) return;
-
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        if (width === 0 || height === 0) return;
-
-        AppState.threeCamera.aspect = width / height;
-        AppState.threeCamera.updateProjectionMatrix();
-        AppState.threeRenderer.setSize(width, height);
-    }
-
-    function update3DOrganHighlights() {
-        if (!AppState.coreMesh) return;
-
-        const activeDoc = AppState.documents.find(d => d.id === AppState.activeDocId);
-        const nodeList = document.getElementById('organNodeList');
-        nodeList.innerHTML = '';
-
-        if (activeDoc) {
-            const anomalies = (activeDoc.vitals || []).filter(v => v.isAnomaly);
-            if (anomalies.length > 0 || activeDoc.urgency >= 3) {
-                AppState.coreMesh.material.color.setHex(0xf43f5e);
-                AppState.wireMesh.material.color.setHex(0xf43f5e);
-                anomalies.forEach(hv => {
-                    const el = document.createElement('div');
-                    el.style.color = 'var(--accent-rose)';
-                    el.style.fontFamily = 'var(--font-code)';
-                    el.innerHTML = `⚠️ <b>${hv.metric}</b> flag (${hv.value} ${hv.unit || ''})`;
-                    nodeList.appendChild(el);
-                });
-                return;
-            }
-        }
-        
-        AppState.coreMesh.material.color.setHex(0x10b981);
-        AppState.wireMesh.material.color.setHex(0x06b6d4);
-        nodeList.innerHTML = `<div style="color: var(--text-subtle);">All Parameters Nominal</div>`;
-    }
-
-    function updateDeltaMatrix() {
-        const container = document.getElementById('deltaMatrixContainer');
-        if (AppState.documents.length < 2) {
-            container.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-subtle); text-align: center; padding: 1.5rem 0;">Ingest 2 or more reports to view biomarker delta matrix.</div>`;
-            return;
-        }
-
-        let html = `<table class="delta-table"><thead><tr><th>Metric</th>`;
-        AppState.documents.forEach(d => {
-            html += `<th>${d.name.substring(0, 12)}...</th>`;
-        });
-        html += `<th>Status</th></tr></thead><tbody>`;
-
-        const allMetrics = new Set();
-        AppState.documents.forEach(d => (d.vitals || []).forEach(v => allMetrics.add(v.metric)));
-
-        allMetrics.forEach(m => {
-            html += `<tr><td><b>${m}</b></td>`;
-            AppState.documents.forEach(d => {
-                const found = (d.vitals || []).find(v => v.metric === m);
-                html += `<td>${found ? found.value : '-'}</td>`;
-            });
-            html += `<td style="color: var(--accent-emerald);">Tracked</td></tr>`;
-        });
-
-        html += `</tbody></table>`;
-        container.innerHTML = html;
-    }
-
-    async function checkRxInteraction() {
-        const drug = document.getElementById('rxInput').value.trim();
-        const results = document.getElementById('rxResults');
-
-        if (!drug) {
-            alert('Enter a valid drug name.');
-            return;
-        }
-
-        results.innerHTML = `<span style="color: var(--accent-cyan);">Querying NIH RxNorm Engine...</span>`;
-
-        try {
-            const response = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(drug)}`);
-            const data = await response.json();
-
-            if (data.idGroup && data.idGroup.rxnormId) {
-                const rxcui = data.idGroup.rxnormId[0];
-                results.innerHTML = `
-                    <div style="color: var(--accent-emerald); font-weight:700;">RxNorm Concept Match Confirmed</div>
-                    <div><b>RxCUI Identifier:</b> ${rxcui}</div>
-                    <div style="margin-top: 0.5rem; color: var(--text-main);"><b>Status:</b> No critical contraindications against current document biomarker profile.</div>
-                `;
-            } else {
-                results.innerHTML = `<span style="color: var(--accent-rose);">No RxNorm concept match found.</span>`;
-            }
-        } catch (err) {
-            results.innerHTML = `<span style="color: var(--accent-rose);">NIH RxNorm API Connection Timeout.</span>`;
-        }
-    }
-
-    function initSpeechRecognition() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-            AppState.speechRecognition = new Speech();
-            AppState.speechRecognition.continuous = false;
-
-            AppState.speechRecognition.onresult = (event) => {
-                const command = event.results[0][0].transcript.toLowerCase();
-                if (command.includes('analysis')) switchMainView('analysis');
-                else if (command.includes('3d')) switchMainView('3d');
-                else if (command.includes('dicom')) switchMainView('dicom');
-                else if (command.includes('e-ink')) toggleEInkMode();
-            };
-        }
-    }
-
-    function toggleVoiceControl() {
-        const btn = document.getElementById('btnVoiceControl');
-        if (!AppState.speechRecognition) {
-            alert('Speech Recognition API not supported in this browser environment.');
-            return;
-        }
-
-        if (AppState.voiceActive) {
-            AppState.speechRecognition.stop();
-            AppState.voiceActive = false;
-            btn.classList.remove('voice-active');
-            btn.innerText = '🎙️ Voice Commands';
-        } else {
-            AppState.speechRecognition.start();
-            AppState.voiceActive = true;
-            btn.classList.add('voice-active');
-            btn.innerText = '🔴 Listening...';
-        }
-    }
-
-    function exportFHIRJSON() {
-        if (AppState.documents.length === 0) {
-            alert('Ingest a report before exporting FHIR bundle.');
-            return;
-        }
-
-        const activeDoc = AppState.documents.find(d => d.id === AppState.activeDocId) || AppState.documents[0];
-
-        const fhirBundle = {
-            resourceType: "Bundle",
-            type: "diagnostic-report",
-            id: activeDoc.hash.substring(0, 16),
-            meta: { lastUpdated: new Date().toISOString() },
-            entry: (activeDoc.vitals || []).map(v => ({
-                resource: {
-                    resourceType: "Observation",
-                    status: "final",
-                    code: { text: v.metric },
-                    valueQuantity: { value: v.value, unit: v.unit }
-                }
-            }))
+        const config = offsets[i] || { pos: [0, 0, 0], scale: [0.5, 0.5, 0.5] };
+        mesh.position.set(...config.pos);
+        mesh.scale.set(...config.scale);
+
+        organGroup.add(mesh);
+      });
+
+      scene.add(organGroup);
+
+      // Mouse Drag Rotation
+      let isDragging = false;
+      let previousMousePosition = { x: 0, y: 0 };
+
+      container.addEventListener('mousedown', () => isDragging = true);
+      container.addEventListener('mouseup', () => isDragging = false);
+      container.addEventListener('mouseleave', () => isDragging = false);
+      container.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaMove = {
+          x: e.clientX - previousMousePosition.x,
+          y: e.clientY - previousMousePosition.y
         };
 
-        const blob = new Blob([JSON.stringify(fhirBundle, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `FHIR_R4_${activeDoc.name}.json`;
-        a.click();
-    }
+        organGroup.rotation.y += deltaMove.x * 0.01;
+        organGroup.rotation.x += deltaMove.y * 0.01;
 
-    function showExportModal() {
-        document.getElementById('qrModal').classList.remove('hidden');
-        const qrContainer = document.getElementById('qrcode');
-        qrContainer.innerHTML = '';
-        if (typeof QRCode !== 'undefined') {
-            new QRCode(qrContainer, {
-                text: "https://bioprint-vault.internal/sync?id=" + (AppState.activeDocId || 'none'),
-                width: 140,
-                height: 140
-            });
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      });
+
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
+      });
+      container.addEventListener('touchend', () => isDragging = false);
+      container.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const deltaMove = {
+          x: e.touches[0].clientX - previousMousePosition.x,
+          y: e.touches[0].clientY - previousMousePosition.y
+        };
+
+        organGroup.rotation.y += deltaMove.x * 0.01;
+        organGroup.rotation.x += deltaMove.y * 0.01;
+
+        previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      });
+
+      window.addEventListener('resize', onWindowResize);
+      isThreeInitialized = true;
+      animate();
     }
 
-    function hideExportModal() {
-        document.getElementById('qrModal').classList.add('hidden');
+    function onWindowResize() {
+      const container = document.getElementById('canvas-container');
+      if (!container || !renderer || !camera) return;
+
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    function toggleEInkMode() {
-        document.body.classList.toggle('e-ink-mode');
+    function animate() {
+      requestAnimationFrame(animate);
+      if (organGroup) {
+        organGroup.rotation.y += 0.003;
+      }
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+      }
     }
-
-    function showLoader(show, statusText = '', percent = 0) {
-        const loader = document.getElementById('loader');
-        if (show) loader.classList.remove('hidden');
-        else loader.classList.add('hidden');
-
-        document.getElementById('loaderStatus').innerText = statusText;
-        document.getElementById('loaderPercent').innerText = `${percent}%`;
-        document.getElementById('loaderBar').style.width = `${percent}%`;
-    }
-
-    function logAuditEntry(fileName, hash) {
-        const history = document.getElementById('hashHistory');
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.innerHTML = `
-            <span>[INGEST] ${fileName.substring(0, 18)}...</span>
-            <span class="log-timestamp">${new Date().toLocaleTimeString()}</span>
-        `;
-        history.prepend(entry);
-    }
-    </script>
+  </script>
 </body>
 </html>
