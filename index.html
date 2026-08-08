@@ -454,54 +454,64 @@
     }
 
     // Global file handler function registered at window level
-    async function handleFile(file) {
-        if (!file) return;
+    // Replace handleFile in index.html with this safer version
+async function handleFile(file) {
+    if (!file) return;
 
-        const loader = document.getElementById('loader');
-        const bar = document.getElementById('loaderBar');
-        const percent = document.getElementById('loaderPercent');
-        const status = document.getElementById('loaderStatus');
+    const loader = document.getElementById('loader');
+    const bar = document.getElementById('loaderBar');
+    const percent = document.getElementById('loaderPercent');
+    const status = document.getElementById('loaderStatus');
 
-        if (loader) loader.classList.remove('hidden');
-        if (bar) bar.style.width = '15%';
-        if (percent) percent.innerText = '15%';
+    if (loader) loader.classList.remove('hidden');
+    if (bar) bar.style.width = '15%';
+    if (percent) percent.innerText = '15%';
 
-        try {
-            let base64Image = '';
+    try {
+        let base64Image = '';
 
-            if (file.type === 'application/pdf') {
-                if (status) status.innerText = 'Rasterizing PDF page to PNG via PDF.js...';
-                base64Image = await convertPdfToImage(file);
-            } else {
-                if (status) status.innerText = 'Reading image payload...';
-                base64Image = await readFileAsBase64(file);
-            }
-
-            if (bar) bar.style.width = '50%';
-            if (percent) percent.innerText = '50%';
-            if (status) status.innerText = 'Executing serverless vision model parsing...';
-
-            const res = await fetch('/api/groq', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64Image, fileName: file.name })
-            });
-
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Server processing failed');
-
-            if (bar) bar.style.width = '100%';
-            if (percent) percent.innerText = '100%';
-            if (status) status.innerText = 'Analysis Complete!';
-
-            setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 1000);
-
-        } catch (err) {
-            alert('Error processing document: ' + err.message);
-            if (loader) loader.classList.add('hidden');
+        if (file.type === 'application/pdf') {
+            if (status) status.innerText = 'Rasterizing PDF page to PNG via PDF.js...';
+            base64Image = await convertPdfToImage(file);
+        } else {
+            if (status) status.innerText = 'Reading image payload...';
+            base64Image = await readFileAsBase64(file);
         }
-    }
 
+        if (bar) bar.style.width = '50%';
+        if (percent) percent.innerText = '50%';
+        if (status) status.innerText = 'Executing serverless vision model parsing...';
+
+        const res = await fetch('/api/groq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64Image, fileName: file.name })
+        });
+
+        // Safely check if response is JSON before parsing
+        const contentType = res.headers.get('content-type');
+        let result;
+
+        if (contentType && contentType.includes('application/json')) {
+            result = await res.json();
+        } else {
+            const rawText = await res.text();
+            throw new Error(`Server returned status ${res.status}: ${rawText.slice(0, 200)}`);
+        }
+
+        if (!res.ok) throw new Error(result.error || 'Server processing failed');
+
+        if (bar) bar.style.width = '100%';
+        if (percent) percent.innerText = '100%';
+        if (status) status.innerText = 'Analysis Complete!';
+
+        setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 1000);
+
+    } catch (err) {
+        alert('Error processing document: ' + err.message);
+        if (loader) loader.classList.add('hidden');
+    }
+}
     async function convertPdfToImage(file) {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
