@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 // Correct Supabase Project URL
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://autdyccwpbxkgyzwlihg.supabase.co';
@@ -7,35 +7,31 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
- * Helper function to safely extract and parse JSON from LLM responses
- * Handles markdown fences (```json ... ```), trailing commas, and stray text.
+ * Safely extracts and parses JSON from LLM responses.
  */
 function cleanAndParseJSON(rawText) {
   if (!rawText) throw new Error('Empty response received from LLM model.');
 
-  // 1. Strip markdown code blocks if present
   let cleaned = rawText.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   }
 
-  // 2. Extract first valid JSON object payload bounds {...}
   const firstMatch = cleaned.match(/\{[\s\S]*\}/);
   if (firstMatch) {
     cleaned = firstMatch[0];
   }
 
-  // 3. Fix common JSON formatting defects (e.g. trailing commas before } or ])
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
 
   try {
     return JSON.parse(cleaned);
   } catch (err) {
-    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output was: "${rawText.slice(0, 150)}..."`);
+    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output: "${rawText.slice(0, 100)}..."`);
   }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -50,7 +46,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { base64Image, fileName } = req.body;
+    const body = req.body || {};
+    const base64Image = body.base64Image;
+    const fileName = body.fileName;
 
     if (!base64Image) {
       return res.status(400).json({ error: 'No image payload provided' });
@@ -60,7 +58,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GROQ_API_KEY is not configured in Vercel environment variables.' });
     }
 
-    // Call Groq Vision API via server-side key
+    // Call Groq Vision API
     const groqResponse = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
       method: 'POST',
       headers: {
@@ -114,7 +112,6 @@ Return ONLY a raw JSON object matching this schema EXACTLY:
     const groqData = await groqResponse.json();
     const rawContent = groqData.choices?.[0]?.message?.content;
 
-    // Use our resilient JSON cleaner
     const parsedData = cleanAndParseJSON(rawContent);
 
     // Persist parsed record into Supabase
@@ -142,4 +139,4 @@ Return ONLY a raw JSON object matching this schema EXACTLY:
     console.error('Processing error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
-}
+};
