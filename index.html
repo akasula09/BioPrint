@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioPrint Diagnostic Vault — Production AI Platform</title>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-main: #030712;
+            --bg-card: #0b1329;
+            --bg-card-hover: #111c3a;
+            --border-color: #1e293b;
+            --accent-emerald: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-rose: #f43f5e;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+        }
+
+        /* Top Bar */
+        .navbar {
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(11, 19, 41, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .ping-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
+
+        /* Main Workspace Grid */
+        .workspace {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            flex: 1;
+        }
+
+        @media (min-width: 1024px) {
+            .workspace { grid-template-columns: 5fr 7fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            border: 2px dashed #334155;
+            border-radius: 0.75rem;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(3, 7, 18, 0.4);
+        }
+
+        .drop-zone:hover, .drop-zone.active {
+            border-color: var(--accent-emerald);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        /* SVG Vector Canvas Box */
+        .chart-box {
+            background: #030712;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* Feed List Cards */
+        .feed-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.875rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .feed-card:hover { border-color: #334155; }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .severity-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            border: 1px solid transparent;
+        }
+
+        .severity-low {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-emerald);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .severity-high {
+            background: rgba(244, 63, 94, 0.1);
+            color: var(--accent-rose);
+            border-color: rgba(244, 63, 94, 0.2);
+        }
+
+        .doctor-flag {
+            background: rgba(244, 63, 94, 0.1);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            color: #fda4af;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+        }
+
+        .vital-cell {
+            background: #030712;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            text-align: center;
+        }
+
+        .jargon-item {
+            background: #030712;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #0f172a;
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
+            transition: width 0.3s ease;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div>
+            <div class="brand-title">BioPrint Vault</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">AI for Health • Production Architecture</div>
+        </div>
+        <div class="status-badge">
+            <span class="ping-dot"></span>
+            <span id="statusText">Realtime Active</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+
+        <!-- Left Column: Ingestion and Geometry Chart -->
+        <div>
+            <div class="card">
+                <div class="card-title">Document Ingestion Zone</div>
+                <div class="card-subtitle">Upload medical reports directly to your Vercel Serverless Function.</div>
+
+                <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFile(this.files[0])">
+                    <svg style="width: 40px; height: 40px; margin: 0 auto 0.5rem; color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p style="font-size: 0.875rem; font-weight: 500;">Click or Drag Diagnostic Scan Here</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Secure Server-Side Groq Engine</p>
+                </div>
+
+                <!-- Processing Loader -->
+                <div id="loader" class="hidden" style="margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-family: monospace;">
+                        <span id="loaderStatus">Processing file...</span>
+                        <span id="loaderPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="loaderBar" class="progress-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pure SVG Trend Geometry Box -->
+            <div class="card">
+                <div class="card-title">Pure Code Geometry Chart</div>
+                <div class="card-subtitle">Historical Fasting Blood Glucose (mg/dL)</div>
+                <div class="chart-box">
+                    <svg viewBox="0 0 500 150" style="width: 100%; height: auto; overflow: visible;">
+                        <line x1="20" y1="20" x2="480" y2="20" stroke="#1e293b" stroke-dasharray="4 4"/>
+                        <line x1="20" y1="65" x2="480" y2="65" stroke="#1e293b" stroke-dasharray="4 4"/>
+                        <line x1="20" y1="110" x2="480" y2="110" stroke="#1e293b" stroke-dasharray="4 4"/>
+                        <polyline fill="none" stroke="#10b981" stroke-width="3" points="20,110 135,90 250,115 365,50 480,30" />
+                        <circle cx="20" cy="110" r="4" fill="#10b981"/>
+                        <circle cx="135" cy="90" r="4" fill="#10b981"/>
+                        <circle cx="250" cy="115" r="4" fill="#10b981"/>
+                        <circle cx="365" cy="50" r="4" fill="#10b981"/>
+                        <circle cx="480" cy="30" r="6" fill="#06b6d4"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Realtime Feed -->
+        <div>
+            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 1rem; font-weight: 700;">Diagnostic Feeds</h2>
+                <span id="feedCount" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: #0f172a; border-radius: 0.5rem; border: 1px solid var(--border-color);">0 Logged</span>
+            </div>
+
+            <div id="logsContainer">
+                <div class="feed-card" style="text-align: center; color: var(--text-muted); font-size: 0.875rem; padding: 3rem;">
+                    No diagnostic records ingested yet. Drop a scan to execute server route parsing.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://kx6ir81mnlo9oxumgbfg.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let logs = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchLogs();
+            
+            // Subscribe to Supabase Realtime
+            supabase
+                .channel('public:diagnostic_logs')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'diagnostic_logs' }, payload => {
+                    logs.unshift(payload.new);
+                    renderLogs();
+                })
+                .subscribe();
+        });
+
+        async function fetchLogs() {
+            const { data, error } = await supabase
+                .from('diagnostic_logs')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                logs = data;
+                renderLogs();
+            }
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logsContainer');
+            document.getElementById('feedCount').innerText = `${logs.length} Logged`;
+
+            if (logs.length === 0) return;
+
+            container.innerHTML = logs.map(log => {
+                const isHigh = log.urgency_rating >= 4 || log.requires_doctor_flag;
+                const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
+                const vitals = log.vitals || [];
+
+                return `
+                    <div class="feed-card">
+                        <div class="feed-header">
+                            <div>
+                                <strong style="font-size: 0.9rem;">${escapeHtml(log.file_name)}</strong>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace;">
+                                    ${new Date(log.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                            <span class="severity-badge ${isHigh ? 'severity-high' : 'severity-low'}">
+                                Urgency ${log.urgency_rating}/5
+                            </span>
+                        </div>
+
+                        ${log.requires_doctor_flag ? `
+                            <div class="doctor-flag">
+                                ⚠️ <strong>Doctor Review Recommended:</strong> Abnormal thresholds identified.
+                            </div>
+                        ` : ''}
+
+                        ${log.summary ? `
+                            <p style="font-size: 0.8rem; background: #030712; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                                ${escapeHtml(log.summary)}
+                            </p>
+                        ` : ''}
+
+                        ${vitals.length > 0 ? `
+                            <div class="vitals-grid">
+                                ${vitals.map(v => `
+                                    <div class="vital-cell">
+                                        <div style="font-size: 0.65rem; color: var(--text-muted);">${escapeHtml(v.metric)}</div>
+                                        <div style="font-size: 0.8rem; font-weight: bold; font-family: monospace; color: ${v.isAnomaly ? 'var(--accent-cyan)' : 'inherit'}">
+                                            ${v.value} <span style="font-size: 0.6rem; font-weight: normal;">${escapeHtml(v.unit)}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${jargon.length > 0 ? `
+                            <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Plain-English Translation</div>
+                                ${jargon.map(([term, def]) => `
+                                    <div class="jargon-item">
+                                        <strong style="color: var(--accent-cyan);">${escapeHtml(term)}:</strong> ${escapeHtml(def)}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function handleFile(file) {
+            if (!file) return;
+
+            const loader = document.getElementById('loader');
+            const bar = document.getElementById('loaderBar');
+            const percent = document.getElementById('loaderPercent');
+            const status = document.getElementById('loaderStatus');
+
+            loader.classList.remove('hidden');
+            bar.style.width = '20%';
+            percent.innerText = '20%';
+            status.innerText = 'Encoding file payload...';
+
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64Image = reader.result;
+
+                bar.style.width = '50%';
+                percent.innerText = '50%';
+                status.innerText = 'Transmitting to Vercel Serverless Function...';
+
+                try {
+                    const res = await fetch('/api/groq', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ base64Image, fileName: file.name })
+                    });
+
+                    const result = await res.json();
+
+                    if (!res.ok) throw new Error(result.error || 'Server processing failed');
+
+                    bar.style.width = '100%';
+                    percent.innerText = '100%';
+                    status.innerText = 'Complete!';
+
+                    setTimeout(() => loader.classList.add('hidden'), 1000);
+
+                } catch (err) {
+                    alert('Error processing document: ' + err.message);
+                    loader.classList.add('hidden');
+                }
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+    </script>
+</body>
+</html>
