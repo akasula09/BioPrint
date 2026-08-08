@@ -1,5 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
+// Base domains and endpoints
+const PROTOCOL = 'https://';
+const SUPABASE_DOMAIN = 'autdyccwpbxkgyzwlihg.supabase.co';
+const GROQ_DOMAIN = 'api.groq.com';
+const GROQ_PATH = '/openai/v1/chat/completions';
+
+const DEFAULT_SUPABASE_URL = PROTOCOL + SUPABASE_DOMAIN;
+const GROQ_ENDPOINT = PROTOCOL + GROQ_DOMAIN + GROQ_PATH;
+
 function cleanAndParseJSON(rawText) {
   if (!rawText) throw new Error('Empty response received from LLM model.');
 
@@ -23,7 +32,6 @@ function cleanAndParseJSON(rawText) {
 }
 
 module.exports = async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -37,7 +45,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://autdyccwpbxkgyzwlihg.supabase.co';
+    const SUPABASE_URL = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -53,8 +61,27 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GROQ_API_KEY is not configured in Vercel environment variables.' });
     }
 
-    // Call Groq Vision API
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English.
+
+Return strictly a valid JSON object following this exact structure with valid JSON types (no markdown, no preamble):
+{
+  "summary": "1-2 sentence plain English summary of findings",
+  "urgency_rating": 3,
+  "jargon_map": {
+    "Leukocytosis": "High white blood cell count"
+  },
+  "vitals": [
+    {
+      "metric": "WBC",
+      "value": 14.2,
+      "unit": "10^3/uL",
+      "isAnomaly": true
+    }
+  ],
+  "requires_doctor_flag": true
+}`;
+
+    const groqResponse = await fetch(GROQ_ENDPOINT, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
@@ -65,37 +92,17 @@ module.exports = async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert clinical data extraction API. You MUST output strictly valid JSON matching the user prompt structure with no intro or commentary.'
+            content: 'You are an automated clinical extraction parser. Output ONLY raw, unformatted valid JSON.'
           },
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English. 
-
-Return ONLY a raw JSON object matching this schema EXACTLY:
-{
-  "summary": "<1-2 sentence plain-English summary of findings>",
-  "urgency_rating": <number 1-5 where 5 is critical/severe>,
-  "jargon_map": {
-    "<medical term>": "<plain-English definition>"
-  },
-  "vitals": [
-    { "metric": "<Metric Name>", "value": <numeric value or string>, "unit": "<unit>", "isAnomaly": <boolean> }
-  ],
-  "requires_doctor_flag": <boolean, true if urgency_rating >= 4 or critical anomaly exists>
-}`
-              },
-              {
-                type: 'image_url',
-                image_url: { url: base64Image }
-              }
+              { type: 'text', text: promptText },
+              { type: 'image_url', image_url: { url: base64Image } }
             ]
           }
         ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
+        temperature: 0.1
       })
     });
 
@@ -109,7 +116,6 @@ Return ONLY a raw JSON object matching this schema EXACTLY:
 
     const parsedData = cleanAndParseJSON(rawContent);
 
-    // Persist parsed record into Supabase
     const { data: record, error: dbError } = await supabase
       .from('diagnostic_logs')
       .insert([
