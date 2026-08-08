@@ -370,7 +370,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Tab switching bindings
         document.getElementById('btn-tab-upload').addEventListener('click', function() {
             switchSidebarTab('upload');
         });
@@ -378,7 +377,6 @@
             switchSidebarTab('vitals');
         });
 
-        // Drop zone file inputs
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
@@ -537,19 +535,33 @@
         `;
     }
 
+    function updateProgress(percent, statusText) {
+        const bar = document.getElementById('loaderBar');
+        const percentText = document.getElementById('loaderPercent');
+        const status = document.getElementById('loaderStatus');
+
+        if (bar) bar.style.width = `${percent}%`;
+        if (percentText) percentText.innerText = `${percent}%`;
+        if (status && statusText) status.innerText = statusText;
+    }
+
     async function handleFile(file) {
         if (!file) return;
         const loader = document.getElementById('loader');
-        const bar = document.getElementById('loaderBar');
-        const status = document.getElementById('loaderStatus');
 
         if (loader) loader.classList.remove('hidden');
-        if (bar) bar.style.width = '20%';
+        updateProgress(15, 'Reading file...');
 
         try {
-            let base64Image = file.type === 'application/pdf' ? await convertPdfToImage(file) : await readFileAsBase64(file);
-            if (bar) bar.style.width = '60%';
-            if (status) status.innerText = 'Parsing scan...';
+            let base64Image;
+            if (file.type === 'application/pdf') {
+                base64Image = await convertPdfToImage(file);
+            } else {
+                updateProgress(30, 'Converting image...');
+                base64Image = await readFileAsBase64(file);
+            }
+
+            updateProgress(60, 'Parsing scan...');
 
             const res = await fetch('/api/groq', {
                 method: 'POST',
@@ -558,8 +570,11 @@
             });
 
             if (!res.ok) throw new Error('API Execution Failed');
-            if (bar) bar.style.width = '100%';
-            setTimeout(() => { loader.classList.add('hidden'); }, 800);
+
+            updateProgress(100, 'Complete!');
+            setTimeout(() => { 
+                if (loader) loader.classList.add('hidden'); 
+            }, 800);
         } catch (err) {
             alert(err.message);
             if (loader) loader.classList.add('hidden');
@@ -567,14 +582,20 @@
     }
 
     async function convertPdfToImage(file) {
+        updateProgress(25, 'Loading PDF document...');
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+        updateProgress(40, 'Rendering page canvas...');
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.5 });
         const canvas = document.getElementById('pdfRenderCanvas');
         const context = canvas.getContext('2d');
-        canvas.height = viewport.height; canvas.width = viewport.width;
+        canvas.height = viewport.height; 
+        canvas.width = viewport.width;
+
         await page.render({ canvasContext: context, viewport: viewport }).promise;
+        updateProgress(55, 'Generating scan payload...');
         return canvas.toDataURL('image/png');
     }
 
