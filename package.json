@@ -2,9 +2,6 @@
   "name": "bioprint",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "build": "echo 'Building...'"
-  },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0"
   }
