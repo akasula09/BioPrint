@@ -13,29 +13,41 @@ function cleanAndParseJSON(rawText) {
 
   let cleaned = rawText.trim();
 
-  // 1. Remove all <think>...</think> blocks if present
+  // 1. First attempt: Strip complete <think>...</think> blocks
   cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-  // 2. Strip markdown code fences (```json ... ```)
+  // 2. Fallback for unclosed <think> tag (when model hits max_tokens inside thinking phase):
+  // If no closing tag exists, strip from <think> to the first '{' if a brace is found later
+  if (cleaned.includes('<think>')) {
+    const firstBrace = cleaned.indexOf('{');
+    if (firstBrace !== -1) {
+      cleaned = cleaned.slice(firstBrace);
+    } else {
+      // If there are no braces at all, strip the entire unclosed think block
+      cleaned = cleaned.replace(/<think>[\s\S]*/gi, '').trim();
+    }
+  }
+
+  // 3. Strip markdown code fences (```json ... ```)
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
-  // 3. Extract strictly between the FIRST '{' and the LAST '}'
+  // 4. Locate absolute JSON bounds {...}
   const startIdx = cleaned.indexOf('{');
   const endIdx = cleaned.lastIndexOf('}');
 
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+  if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
     cleaned = cleaned.slice(startIdx, endIdx + 1);
   } else {
-    throw new Error('No valid JSON object bounds found in model output.');
+    throw new Error(`No valid JSON object bounds found in model output. Raw content received: "${rawText.slice(0, 150)}..."`);
   }
 
-  // 4. Clean trailing commas before closing braces/brackets
+  // 5. Clean trailing commas before closing braces/brackets
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
 
   try {
     return JSON.parse(cleaned);
   } catch (err) {
-    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output: "${rawText.slice(0, 150)}..."`);
+    throw new Error(`Failed to parse AI JSON response: ${err.message}. Substring attempted: "${cleaned.slice(0, 150)}..."`);
   }
 }
 
@@ -71,7 +83,7 @@ module.exports = async function handler(req, res) {
 
     const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English.
 
-Output ONLY a raw, unformatted JSON object matching this schema. Ensure every string value is wrapped in double quotes, all booleans are lowercase (true/false), and no trailing commas exist:
+Return ONLY a raw, unformatted valid JSON object matching this structure:
 {
   "summary": "1-2 sentence plain English summary of findings",
   "urgency_rating": 3,
@@ -100,7 +112,7 @@ Output ONLY a raw, unformatted JSON object matching this schema. Ensure every st
         messages: [
           {
             role: 'system',
-            content: 'You are an automated medical extraction engine. Output ONLY valid, raw JSON.'
+            content: 'You are an automated medical extraction engine. Begin immediately with the JSON payload.'
           },
           {
             role: 'user',
@@ -111,7 +123,8 @@ Output ONLY a raw, unformatted JSON object matching this schema. Ensure every st
           }
         ],
         temperature: 0.1,
-        max_tokens: 2048
+        max_tokens: 4096,
+        reasoning_format: 'hidden'
       })
     });
 
