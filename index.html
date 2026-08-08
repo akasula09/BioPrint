@@ -11,6 +11,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
+    <!-- DICOM Parsing Libraries -->
+    <script src="https://unpkg.com/dicom-parser@1.8.9/dist/dicomParser.min.js"></script>
+    <script src="https://unpkg.com/cornerstone-core@2.6.1/dist/cornerstone.min.js"></script>
+    <script src="https://unpkg.com/cornerstone-wado-image-loader@3.3.1/dist/cornerstoneWADOImageLoader.bundle.min.js"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -427,6 +432,20 @@
             display: block;
         }
 
+        /* DICOM Canvas Container */
+        #dicomViewport {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
         /* Groq Console */
         .ai-console-box {
             background: rgba(13, 17, 38, 0.9);
@@ -668,17 +687,26 @@
                 <!-- Tab 4: DICOM Engine -->
                 <div id="tab-dicom" class="sidebar-content">
                     <div id="dicomDropZone" class="drop-zone" style="border-color: var(--accent-purple);">
-                        <input type="file" id="dicomFileInput" accept=".dcm" class="hidden" multiple>
+                        <input type="file" id="dicomFileInput" accept=".dcm,application/dicom" class="hidden" multiple>
                         <div style="font-size: 2rem; margin-bottom: 0.5rem;">🩻</div>
                         <p style="font-size: 0.85rem; font-weight: 700; color: var(--accent-purple);">Load DICOM Series (.dcm)</p>
+                        <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">Click to browse or drop DICOM files</p>
+                    </div>
+
+                    <div class="card-panel">
+                        <div class="panel-title">DICOM Canvas Viewer</div>
+                        <div id="dicomViewport">
+                            <span id="dicomPlaceholder" style="font-size: 0.72rem; color: var(--text-subtle);">No DICOM series loaded</span>
+                            <canvas id="dicomCanvas" class="hidden"></canvas>
+                        </div>
                     </div>
 
                     <div class="card-panel">
                         <div class="panel-title">DICOM Controls</div>
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                             <div>
-                                <label style="font-size: 0.68rem; color: var(--text-muted);">Slice Selector: <span id="sliceNum">1 / 1</span></label>
-                                <input type="range" id="sliceRange" min="1" max="1" value="1" style="width: 100%;" oninput="changeDicomSlice(this.value)">
+                                <label style="font-size: 0.68rem; color: var(--text-muted);">Slice Selector: <span id="sliceNum">0 / 0</span></label>
+                                <input type="range" id="sliceRange" min="1" max="1" value="1" style="width: 100%;" oninput="changeDicomSlice(this.value)" disabled>
                             </div>
                         </div>
                     </div>
@@ -787,9 +815,16 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
+    // Initialize Cornerstone WADO Image Loader if available
+    if (typeof cornerstoneWADOImageLoader !== 'undefined') {
+        cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+        cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         setupSidebarTabs();
         setupFileUploadHandlers();
+        setupDicomHandlers();
         init3DAnatomyEngine();
         initSpeechRecognition();
     });
@@ -826,6 +861,141 @@
                 Array.from(e.target.files).forEach(file => processUploadedFile(file));
             }
         });
+    }
+
+    function setupDicomHandlers() {
+        const dicomDropZone = document.getElementById('dicomDropZone');
+        const dicomFileInput = document.getElementById('dicomFileInput');
+
+        if (dicomDropZone && dicomFileInput) {
+            dicomDropZone.addEventListener('click', () => dicomFileInput.click());
+
+            dicomDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dicomDropZone.style.borderColor = 'var(--accent-emerald)';
+            });
+
+            dicomDropZone.addEventListener('dragleave', () => {
+                dicomDropZone.style.borderColor = 'var(--accent-purple)';
+            });
+
+            dicomDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dicomDropZone.style.borderColor = 'var(--accent-purple)';
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    processDicomFiles(Array.from(e.dataTransfer.files));
+                }
+            });
+
+            dicomFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    processDicomFiles(Array.from(e.target.files));
+                }
+            });
+        }
+    }
+
+    async function processDicomFiles(files) {
+        AppState.dicomSlices = [];
+        
+        for (const file of files) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const byteArray = new Uint8Array(arrayBuffer);
+                
+                let dataset = null;
+                if (typeof dicomParser !== 'undefined') {
+                    dataset = dicomParser.parseDicom(byteArray);
+                }
+
+                AppState.dicomSlices.push({
+                    file: file,
+                    dataset: dataset,
+                    arrayBuffer: arrayBuffer
+                });
+            } catch (err) {
+                console.error('DICOM parsing error:', err);
+            }
+        }
+
+        if (AppState.dicomSlices.length > 0) {
+            const range = document.getElementById('sliceRange');
+            range.min = 1;
+            range.max = AppState.dicomSlices.length;
+            range.value = 1;
+            range.disabled = false;
+
+            document.getElementById('sliceNum').innerText = `1 / ${AppState.dicomSlices.length}`;
+            renderDicomSlice(0);
+        } else {
+            alert('No valid DICOM files could be parsed.');
+        }
+    }
+
+    function renderDicomSlice(index) {
+        if (!AppState.dicomSlices[index]) return;
+
+        const slice = AppState.dicomSlices[index];
+        const canvas = document.getElementById('dicomCanvas');
+        const placeholder = document.getElementById('dicomPlaceholder');
+        const ctx = canvas.getContext('2d');
+
+        placeholder.classList.add('hidden');
+        canvas.classList.remove('hidden');
+
+        canvas.width = 220;
+        canvas.height = 220;
+
+        if (slice.dataset) {
+            try {
+                const rows = slice.dataset.uint16('x00280010') || 256;
+                const columns = slice.dataset.uint16('x00280011') || 256;
+                const pixelDataElement = slice.dataset.elements.x7fe00010;
+
+                if (pixelDataElement) {
+                    const pixelData = new Uint16Array(slice.arrayBuffer, pixelDataElement.dataOffset, pixelDataElement.length / 2);
+                    const imgData = ctx.createImageData(columns, rows);
+
+                    let min = Infinity, max = -Infinity;
+                    for (let i = 0; i < pixelData.length; i++) {
+                        if (pixelData[i] < min) min = pixelData[i];
+                        if (pixelData[i] > max) max = pixelData[i];
+                    }
+                    const range = (max - min) || 1;
+
+                    for (let i = 0; i < pixelData.length; i++) {
+                        const val = Math.floor(((pixelData[i] - min) / range) * 255);
+                        const idx = i * 4;
+                        imgData.data[idx] = val;
+                        imgData.data[idx + 1] = val;
+                        imgData.data[idx + 2] = val;
+                        imgData.data[idx + 3] = 255;
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Direct DICOM pixel render fallback:', e);
+            }
+        }
+
+        // Fallback placeholder rendering for raw DICOM metadata viewing
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#10b981';
+        ctx.font = '12px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(`DICOM Slice #${index + 1}`, canvas.width / 2, canvas.height / 2 - 10);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px Plus Jakarta Sans';
+        ctx.fillText(slice.file.name.substring(0, 25), canvas.width / 2, canvas.height / 2 + 15);
+    }
+
+    function changeDicomSlice(val) {
+        const index = parseInt(val, 10) - 1;
+        AppState.currentSliceIndex = index;
+        document.getElementById('sliceNum').innerText = `${val} / ${AppState.dicomSlices.length}`;
+        renderDicomSlice(index);
     }
 
     function fileToBase64(file) {
@@ -876,7 +1046,7 @@
 
             showLoader(true, 'Executing Analysis via /api/groq.js...', 65);
 
-            // DIRECT ENDPOINT URL NOW FORCED TO /api/groq.js
+            // DIRECT ENDPOINT URL FORCED TO /api/groq.js
             const response = await fetch('/api/groq.js', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1006,7 +1176,6 @@
         const container = document.getElementById('anatomyCanvas');
         if (!container) return;
 
-        // Clean container
         container.innerHTML = '';
 
         const width = container.clientWidth || 300;
