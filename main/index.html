@@ -3,73 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Health Analytics Dashboard</title>
+  <title>BioPrint - AI Health & Organ Mapping</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Three.js for 3D Visualizations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- PDF.js for PDF Page Rendering to Canvas Image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
+    body { background-color: #0b0f17; color: #f1f5f9; }
     .view-section { display: none; }
     .view-section.active { display: block; }
     #canvas-container canvas { width: 100% !important; height: 100% !important; border-radius: 0.75rem; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col font-sans">
 
   <!-- Top Navigation Bar -->
-  <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
+  <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-30">
     <div class="flex items-center space-x-3">
-      <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold text-lg">HA</div>
-      <h1 class="text-xl font-bold text-slate-900">HealthAnalytics</h1>
+      <div class="bg-indigo-600 text-white p-2 rounded-xl font-black text-lg tracking-wider shadow-lg shadow-indigo-500/20">BP</div>
+      <h1 class="text-xl font-bold text-white tracking-wide">Bio<span class="text-indigo-400">Print</span></h1>
     </div>
-    <button id="sidebar-toggle" onclick="toggleSidebar()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition">
+    <button id="sidebar-toggle" onclick="toggleSidebar()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-lg text-sm transition border border-slate-700">
       ☰ Menu & Tools
     </button>
   </header>
 
   <!-- Sliding Sidebar -->
-  <aside id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-white border-l border-slate-200 shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 p-6 flex flex-col">
+  <aside id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 p-6 flex flex-col">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-lg font-bold text-slate-900">Tools & Info</h2>
-      <button onclick="toggleSidebar()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+      <h2 class="text-lg font-bold text-white">Tools & Options</h2>
+      <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
     </div>
     <div class="space-y-4 flex-1">
-      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-        <h3 class="text-sm font-semibold text-slate-700">Quick Status</h3>
-        <p class="text-xs text-slate-500 mt-1" id="sidebar-status">No PDF uploaded yet.</p>
+      <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-800">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</h3>
+        <p class="text-xs text-slate-300 mt-1" id="sidebar-status">No PDF uploaded yet.</p>
       </div>
-      <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
-        <h3 class="text-sm font-semibold text-slate-700">Help & Instructions</h3>
-        <p class="text-xs text-slate-500 mt-1">Upload your medical PDF report to generate structured insights, 3D organ visualizations, and medication checks.</p>
+      <div class="p-4 bg-slate-800/50 rounded-xl border border-slate-800">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Info</h3>
+        <p class="text-xs text-slate-300 mt-1">Upload a medical PDF to analyze biomarkers, view interactive 3D organ structures, and check medication safety.</p>
       </div>
     </div>
-    <button onclick="resetApp()" class="w-full py-2 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100 text-sm transition">
+    <button onclick="resetApp()" class="w-full py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium rounded-lg hover:bg-rose-500/20 text-sm transition">
       Start Over
     </button>
   </aside>
-  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm hidden z-40"></div>
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-40"></div>
 
   <!-- Main Content Container -->
   <main class="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col justify-center">
 
     <!-- STEP 1: PDF Upload -->
     <section id="view-upload" class="view-section active text-center">
-      <div class="bg-white p-10 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto">
-        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+      <div class="bg-slate-900/90 border border-slate-800 p-10 rounded-2xl shadow-xl max-w-xl mx-auto backdrop-blur-sm">
+        <div class="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
           📄
         </div>
-        <h2 class="text-2xl font-bold text-slate-900 mb-2">Upload Medical Report</h2>
-        <p class="text-slate-500 text-sm mb-6">Select your PDF document to process health data and metrics.</p>
+        <h2 class="text-2xl font-bold text-white mb-2">Upload Medical Report</h2>
+        <p class="text-slate-400 text-sm mb-6">Upload your PDF document for BioPrint AI processing.</p>
 
-        <label class="block w-full border-2 border-dashed border-slate-300 rounded-xl p-8 hover:border-indigo-500 cursor-pointer transition bg-slate-50/50 hover:bg-indigo-50/30">
+        <label class="block w-full border-2 border-dashed border-slate-700 rounded-xl p-8 hover:border-indigo-500 cursor-pointer transition bg-slate-800/30 hover:bg-slate-800/60">
           <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="handleFileUpload(event)" />
-          <span class="text-sm font-medium text-slate-600 block">Click to upload PDF report</span>
-          <span class="text-xs text-slate-400 block mt-1">PDF files up to 10MB</span>
+          <span class="text-sm font-medium text-slate-300 block">Click to upload PDF report</span>
+          <span class="text-xs text-slate-500 block mt-1">PDF files up to 10MB</span>
         </label>
 
-        <div class="mt-6 flex items-center justify-center space-x-2 text-xs text-slate-400">
-          <span>Or test immediately:</span>
-          <button onclick="loadDemoData()" class="text-indigo-600 font-semibold hover:underline">Load Demo Report</button>
+        <!-- Loading Progress Bar -->
+        <div id="upload-loader" class="hidden mt-6 text-left">
+          <div class="flex justify-between text-xs font-mono mb-1">
+            <span id="loader-status" class="text-indigo-400">Processing PDF...</span>
+            <span id="loader-percent" class="text-slate-400">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+            <div id="loader-bar" class="bg-indigo-500 h-full w-0 transition-all duration-200"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -77,39 +86,39 @@
     <!-- STEP 2: Main Choice Selection Menu -->
     <section id="view-selection" class="view-section">
       <div class="text-center mb-8">
-        <h2 class="text-2xl font-bold text-slate-900">What would you like to explore?</h2>
-        <p class="text-slate-500 text-sm mt-1">Select an option below to view details from your report.</p>
+        <h2 class="text-2xl font-bold text-white">Select a BioPrint Feature</h2>
+        <p class="text-slate-400 text-sm mt-1">Choose an option below to view extracted insights.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Option 1: AI Report -->
-        <button onclick="showView('view-report')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+        <button onclick="showView('view-report')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-indigo-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 text-xl">📊</div>
-            <h3 class="text-lg font-bold text-slate-900 mb-1">AI Report</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">Read a clear, simplified summary of your key health metrics and findings.</p>
+            <div class="w-12 h-12 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center mb-4 text-xl">📊</div>
+            <h3 class="text-lg font-bold text-white mb-1 group-hover:text-indigo-400 transition">AI Report</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">Read a clear, simplified summary of your key health metrics and findings.</p>
           </div>
-          <span class="mt-6 text-sm font-semibold text-blue-600">Open Report &rarr;</span>
+          <span class="mt-6 text-sm font-semibold text-blue-400 flex items-center gap-1">Open Report &rarr;</span>
         </button>
 
         <!-- Option 2: 3D Organ Map -->
-        <button onclick="showView('view-3d')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+        <button onclick="showView('view-3d')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-purple-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4 text-xl">🫀</div>
-            <h3 class="text-lg font-bold text-slate-900 mb-1">3D Organ View</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">See an interactive 3D model highlighting organ status based on your data.</p>
+            <div class="w-12 h-12 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center mb-4 text-xl">🫀</div>
+            <h3 class="text-lg font-bold text-white mb-1 group-hover:text-purple-400 transition">3D Organ View</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">Interactive 3D anatomical visualization colored by biomarker status.</p>
           </div>
-          <span class="mt-6 text-sm font-semibold text-purple-600">Open 3D Model &rarr;</span>
+          <span class="mt-6 text-sm font-semibold text-purple-400 flex items-center gap-1">Open 3D Model &rarr;</span>
         </button>
 
         <!-- Option 3: Med Check -->
-        <button onclick="showView('view-meds')" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-500 hover:shadow-md transition text-left flex flex-col justify-between">
+        <button onclick="showView('view-meds')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-emerald-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
-            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-xl">💊</div>
-            <h3 class="text-lg font-bold text-slate-900 mb-1">Medication Check</h3>
-            <p class="text-xs text-slate-500 leading-relaxed">Check if specific medications are suitable or may cause interactions.</p>
+            <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4 text-xl">💊</div>
+            <h3 class="text-lg font-bold text-white mb-1 group-hover:text-emerald-400 transition">Medication Check</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">Evaluate medication suitability and potential biomarker interactions.</p>
           </div>
-          <span class="mt-6 text-sm font-semibold text-emerald-600">Check Medications &rarr;</span>
+          <span class="mt-6 text-sm font-semibold text-emerald-400 flex items-center gap-1">Check Safety &rarr;</span>
         </button>
       </div>
     </section>
@@ -117,22 +126,22 @@
     <!-- STEP 3A: Dedicated AI Report View -->
     <section id="view-report" class="view-section">
       <div class="mb-6">
-        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
           &larr; Back to Options
         </button>
-        <h2 class="text-2xl font-bold text-slate-900">Customized AI Health Report</h2>
+        <h2 class="text-2xl font-bold text-white">Customized AI Health Report</h2>
       </div>
 
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-6">
         <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Executive Summary</h3>
-          <p id="report-summary" class="text-slate-700 leading-relaxed text-sm">Processing report data...</p>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Executive Summary</h3>
+          <p id="report-summary" class="text-slate-300 leading-relaxed text-sm">Processing report data...</p>
         </div>
 
-        <hr class="border-slate-100" />
+        <hr class="border-slate-800" />
 
         <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Key Biomarkers</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Key Biomarkers</h3>
           <div id="biomarker-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Dynamically injected -->
           </div>
@@ -144,33 +153,33 @@
     <section id="view-3d" class="view-section">
       <div class="mb-6 flex justify-between items-end">
         <div>
-          <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+          <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
             &larr; Back to Options
           </button>
-          <h2 class="text-2xl font-bold text-slate-900">3D Organ Health Model</h2>
+          <h2 class="text-2xl font-bold text-white">3D Organ Health Model</h2>
         </div>
-        <div class="text-xs text-slate-500">Click & Drag to rotate visualization</div>
+        <div class="text-xs text-slate-500">Click & drag to rotate</div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-slate-900 rounded-2xl overflow-hidden h-[450px] relative shadow-inner">
+        <div class="lg:col-span-2 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden h-[450px] relative shadow-inner">
           <div id="canvas-container" class="w-full h-full"></div>
-          <div class="absolute bottom-4 left-4 right-4 flex justify-center gap-4 bg-slate-800/80 backdrop-blur-md py-2 px-4 rounded-xl text-xs text-slate-300">
+          <div class="absolute bottom-4 left-4 right-4 flex justify-center gap-4 bg-slate-900/90 backdrop-blur-md border border-slate-800 py-2 px-4 rounded-xl text-xs text-slate-300">
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Normal</span>
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Monitor</span>
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Attention</span>
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h3 class="text-sm font-bold text-slate-900 mb-4">Organ Status Breakdown</h3>
+            <h3 class="text-sm font-bold text-white mb-4">Organ Status Breakdown</h3>
             <div id="organ-status-list" class="space-y-3 text-xs">
               <!-- Dynamically populated -->
             </div>
           </div>
-          <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
-            Organ indicators are generated dynamically from analyzed biomarker values.
+          <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-500">
+            Organ indicators dynamically map to parsed PDF biomarker data.
           </div>
         </div>
       </div>
@@ -179,18 +188,18 @@
     <!-- STEP 3C: Dedicated Medication Check View -->
     <section id="view-meds" class="view-section">
       <div class="mb-6">
-        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2">
+        <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
           &larr; Back to Options
         </button>
-        <h2 class="text-2xl font-bold text-slate-900">Medication Safety Check</h2>
+        <h2 class="text-2xl font-bold text-white">Medication Safety Check</h2>
       </div>
 
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-6">
         <div class="max-w-md">
           <label for="med-search" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Check Specific Medication</label>
           <div class="flex gap-2">
-            <input type="text" id="med-search" placeholder="Enter drug name (e.g., Metformin, Ibuprofen)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-            <button onclick="checkMedication()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Check</button>
+            <input type="text" id="med-search" placeholder="Enter drug name (e.g., Metformin, Ibuprofen)..." class="flex-1 bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+            <button onclick="checkMedication()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-500 transition">Check</button>
           </div>
         </div>
 
@@ -199,7 +208,7 @@
         </div>
 
         <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Report Interaction Assessment</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Report Interaction Assessment</h3>
           <div id="med-list" class="space-y-3">
             <!-- Dynamically populated -->
           </div>
@@ -210,6 +219,11 @@
   </main>
 
   <script>
+    // PDF.js worker setup
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
     // State Management
     let healthData = {
       summary: "",
@@ -252,75 +266,163 @@
       }
     }
 
-    // Mock Upload / Data Loading
-    function handleFileUpload(e) {
-      if (e.target.files.length > 0) {
-        loadDemoData();
+    // Progress bar helper
+    function updateProgress(statusText, percent) {
+      const loader = document.getElementById('upload-loader');
+      loader.classList.remove('hidden');
+      document.getElementById('loader-status').innerText = statusText;
+      document.getElementById('loader-percent').innerText = `${percent}%`;
+      document.getElementById('loader-bar').style.width = `${percent}%`;
+    }
+
+    // Convert PDF array buffer into Base64 PNG image of Page 1
+    async function pdfPageToBase64(arrayBuffer) {
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+      
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+      return canvas.toDataURL('image/png');
+    }
+
+    // Real AI PDF Processing Handler
+    async function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      updateProgress('Reading PDF File...', 20);
+
+      try {
+        const buffer = await file.arrayBuffer();
+        updateProgress('Extracting PDF Page Image...', 45);
+
+        const base64Image = await pdfPageToBase64(buffer);
+        updateProgress('Sending to /api/groq.js AI Engine...', 70);
+
+        const response = await fetch('/api/groq.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64Image: base64Image,
+            fileName: file.name
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || `HTTP ${response.status} Error`);
+        }
+
+        updateProgress('Parsing AI Diagnostics...', 90);
+        const parsed = result.data;
+
+        // Map API response directly to app state
+        healthData = {
+          summary: parsed.summary || "No diagnostic summary provided.",
+          biomarkers: (parsed.vitals || []).map(v => ({
+            name: v.metric,
+            value: `${v.value} ${v.unit || ''}`.trim(),
+            status: v.isAnomaly ? "elevated" : "normal",
+            note: v.isAnomaly ? "Metric flags anomaly" : "Normal reference level"
+          })),
+          organs: mapVitalsToOrgans(parsed.vitals || [], parsed.urgency_rating),
+          medications: mapJargonToMedications(parsed.jargon_map || {})
+        };
+
+        updateProgress('Complete!', 100);
+        setTimeout(() => {
+          document.getElementById('upload-loader').classList.add('hidden');
+          populateUI();
+          document.getElementById('sidebar-status').textContent = `Active: ${file.name}`;
+          showView('view-selection');
+        }, 400);
+
+      } catch (err) {
+        alert('AI Parsing Failed: ' + err.message);
+        document.getElementById('upload-loader').classList.add('hidden');
       }
     }
 
-    function loadDemoData() {
-      healthData = {
-        summary: "Patient analysis indicates normal metabolic function with slightly elevated liver enzyme markers (ALT) and blood glucose. Cardiovascular metrics remain in healthy ranges.",
-        biomarkers: [
-          { name: "Fasting Blood Sugar", value: "108 mg/dL", status: "elevated", note: "Slightly above normal target (70-99 mg/dL)" },
-          { name: "ALT (Liver Enzyme)", value: "48 U/L", status: "elevated", note: "Mild elevation noted" },
-          { name: "Total Cholesterol", value: "185 mg/dL", status: "normal", note: "Optimal range (<200 mg/dL)" },
-          { name: "eGFR (Kidney Function)", value: "95 mL/min", status: "normal", note: "Healthy renal filtration" }
-        ],
-        organs: [
-          { name: "Heart", status: "normal", color: 0x34d399, info: "Optimal rhythm and pressure indicators." },
-          { name: "Liver", status: "attention", color: 0xf43f5e, info: "Mild elevation in enzyme metrics detected." },
-          { name: "Kidneys", status: "normal", color: 0x34d399, info: "Filtration rates within normal index." },
-          { name: "Lungs", status: "normal", color: 0x34d399, info: "Oxygenation levels standard." },
-          { name: "Brain", status: "monitor", color: 0xfacc15, info: "Standard neurological response profile." }
-        ],
-        medications: [
-          { name: "Metformin", compatibility: "Safe", detail: "Suitable given current glucose levels." },
-          { name: "Ibuprofen", compatibility: "Caution", detail: "Frequent high doses may strain elevated liver parameters." }
-        ]
-      };
+    // Convert raw extracted vitals/urgency to organ 3D status colors
+    function mapVitalsToOrgans(vitals, urgency = 1) {
+      const hasAnomaly = vitals.some(v => v.isAnomaly) || urgency >= 3;
+      const liverAnomaly = vitals.some(v => v.isAnomaly && /alt|ast|liver|bilirubin/i.test(v.metric));
+      const kidneyAnomaly = vitals.some(v => v.isAnomaly && /egfr|creatinine|kidney|bun/i.test(v.metric));
+      const heartAnomaly = vitals.some(v => v.isAnomaly && /heart|bp|pulse|troponin|cholesterol/i.test(v.metric));
 
-      populateUI();
-      document.getElementById('sidebar-status').textContent = "Report active: Demo_Patient_Data.pdf";
-      showView('view-selection');
+      return [
+        { name: "Brain", status: urgency > 3 ? "monitor" : "normal", color: urgency > 3 ? 0xfacc15 : 0x34d399, info: "Neurological index evaluated." },
+        { name: "Lungs", status: "normal", color: 0x34d399, info: "Oxygenation levels standard." },
+        { name: "Heart", status: heartAnomaly ? "attention" : "normal", color: heartAnomaly ? 0xf43f5e : 0x34d399, info: heartAnomaly ? "Cardiac indicator flagged." : "Optimal rhythm and pressure indicators." },
+        { name: "Liver", status: liverAnomaly ? "attention" : "normal", color: liverAnomaly ? 0xf43f5e : 0x34d399, info: liverAnomaly ? "Enzyme or metabolic marker elevation." : "Normal hepatic profile." },
+        { name: "Kidneys", status: kidneyAnomaly ? "attention" : "normal", color: kidneyAnomaly ? 0xf43f5e : 0x34d399, info: kidneyAnomaly ? "Renal filtration indicator flagged." : "Filtration rates within normal index." }
+      ];
+    }
+
+    // Map extracted technical jargon into medication/safety insights
+    function mapJargonToMedications(jargonMap) {
+      const keys = Object.keys(jargonMap);
+      if (keys.length === 0) {
+        return [{ name: "Standard Assessment", compatibility: "Safe", detail: "No explicit contraindications detected in parsed findings." }];
+      }
+      return keys.map(key => ({
+        name: key,
+        compatibility: jargonMap[key].toLowerCase().includes('high') || jargonMap[key].toLowerCase().includes('elevated') ? "Caution" : "Safe",
+        detail: jargonMap[key]
+      }));
     }
 
     function populateUI() {
       // Populate Report
       document.getElementById('report-summary').textContent = healthData.summary;
       const bContainer = document.getElementById('biomarker-list');
-      bContainer.innerHTML = healthData.biomarkers.map(b => `
-        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-start">
-          <div>
-            <div class="text-sm font-semibold text-slate-800">${b.name}</div>
-            <div class="text-xs text-slate-500 mt-0.5">${b.note}</div>
+      
+      if (healthData.biomarkers.length > 0) {
+        bContainer.innerHTML = healthData.biomarkers.map(b => `
+          <div class="p-3 rounded-xl border border-slate-800 bg-slate-800/40 flex justify-between items-start">
+            <div>
+              <div class="text-sm font-semibold text-slate-200">${b.name}</div>
+              <div class="text-xs text-slate-400 mt-0.5">${b.note}</div>
+            </div>
+            <span class="text-xs font-bold px-2 py-1 rounded ${b.status === 'normal' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">${b.value}</span>
           </div>
-          <span class="text-xs font-bold px-2 py-1 rounded ${b.status === 'normal' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${b.value}</span>
+        `).join('');
+      } else {
+        bContainer.innerHTML = `<div class="text-xs text-slate-500 col-span-2">No key numerical biomarkers extracted.</div>`;
+      }
+
+      // Populate 3D Breakdown List & Update 3D Mesh Colors
+      const oContainer = document.getElementById('organ-status-list');
+      oContainer.innerHTML = healthData.organs.map(o => `
+        <div class="p-3 rounded-xl border border-slate-800 bg-slate-800/40 flex items-center justify-between">
+          <div>
+            <span class="font-bold text-slate-200">${o.name}</span>
+            <p class="text-slate-400 text-[11px] mt-0.5">${o.info}</p>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #${o.color.toString(16).padStart(6, '0')}"></span>
         </div>
       `).join('');
 
-      // Populate 3D Breakdown List
-      const oContainer = document.getElementById('organ-status-list');
-      oContainer.innerHTML = healthData.organs.map(o => `
-        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between">
-          <div>
-            <span class="font-bold text-slate-800">${o.name}</span>
-            <p class="text-slate-500 text-[11px] mt-0.5">${o.info}</p>
-          </div>
-          <span class="w-2.5 h-2.5 rounded-full" style="background-color: #${o.color.toString(16).padStart(6, '0')}"></span>
-        </div>
-      `).join('');
+      if (organGroup) {
+        update3DMeshColors();
+      }
 
       // Populate Medications
       const mContainer = document.getElementById('med-list');
       mContainer.innerHTML = healthData.medications.map(m => `
-        <div class="p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center">
+        <div class="p-3 rounded-xl border border-slate-800 bg-slate-800/40 flex justify-between items-center">
           <div>
-            <span class="font-bold text-slate-800 text-sm">${m.name}</span>
-            <p class="text-xs text-slate-500 mt-0.5">${m.detail}</p>
+            <span class="font-bold text-slate-200 text-sm">${m.name}</span>
+            <p class="text-xs text-slate-400 mt-0.5">${m.detail}</p>
           </div>
-          <span class="text-xs font-bold px-2.5 py-1 rounded ${m.compatibility === 'Safe' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${m.compatibility}</span>
+          <span class="text-xs font-bold px-2.5 py-1 rounded ${m.compatibility === 'Safe' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">${m.compatibility}</span>
         </div>
       `).join('');
     }
@@ -331,22 +433,32 @@
 
       if (!input) return;
 
-      res.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'bg-amber-50', 'border-amber-200');
+      res.classList.remove('hidden', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300', 'bg-amber-500/10', 'border-amber-500/30', 'text-amber-300');
 
       if (input.toLowerCase().includes('ibuprofen') || input.toLowerCase().includes('tylenol')) {
-        res.classList.add('bg-amber-50', 'border-amber-200', 'text-amber-800');
-        res.innerHTML = `<strong>Caution for ${input}:</strong> Processed by liver/kidneys. Monitor use against elevated liver biomarkers.`;
+        res.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-300');
+        res.innerHTML = `<strong>Caution for ${input}:</strong> Processed by liver/kidneys. Monitor use against parsed AI biomarkers.`;
       } else {
-        res.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
-        res.innerHTML = `<strong>No major flags detected for ${input}:</strong> Appears compatible based on parsed health metrics.`;
+        res.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-300');
+        res.innerHTML = `<strong>No major flags detected for ${input}:</strong> Appears compatible based on parsed BioPrint health metrics.`;
       }
     }
 
     function resetApp() {
       healthData = { summary: "", biomarkers: [], organs: [], medications: [] };
       document.getElementById('sidebar-status').textContent = "No PDF uploaded yet.";
+      document.getElementById('pdf-input').value = "";
       toggleSidebar();
       showView('view-upload');
+    }
+
+    function update3DMeshColors() {
+      if (!organGroup || !healthData.organs || healthData.organs.length === 0) return;
+      organGroup.children.forEach((mesh, i) => {
+        if (healthData.organs[i] && mesh.material) {
+          mesh.material.color.setHex(healthData.organs[i].color);
+        }
+      });
     }
 
     // 3D Scene Initialization
@@ -364,22 +476,21 @@
       container.appendChild(renderer.domElement);
 
       // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      const dirLight = new THREE.DirectionalLight(0x818cf8, 1.2);
       dirLight.position.set(5, 10, 7);
       scene.add(dirLight);
 
       organGroup = new THREE.Group();
 
-      // Representational Organ Mesh Constructs
       const organNodes = healthData.organs.length > 0 ? healthData.organs : [
-        { name: "Brain", color: 0x34d399, pos: [0, 2, 0], scale: [0.6, 0.5, 0.6] },
-        { name: "Lungs", color: 0x34d399, pos: [0, 0.9, 0], scale: [1.1, 0.7, 0.5] },
-        { name: "Heart", color: 0x34d399, pos: [-0.2, 0.8, 0.3], scale: [0.4, 0.4, 0.4] },
-        { name: "Liver", color: 0xf43f5e, pos: [0.4, 0.1, 0.1], scale: [0.7, 0.4, 0.5] },
-        { name: "Kidneys", color: 0x34d399, pos: [0, -0.7, -0.1], scale: [0.9, 0.3, 0.4] }
+        { name: "Brain", color: 0x34d399 },
+        { name: "Lungs", color: 0x34d399 },
+        { name: "Heart", color: 0x34d399 },
+        { name: "Liver", color: 0x34d399 },
+        { name: "Kidneys", color: 0x34d399 }
       ];
 
       const offsets = [
@@ -394,8 +505,8 @@
         const geom = new THREE.SphereGeometry(0.8, 32, 32);
         const mat = new THREE.MeshStandardMaterial({
           color: data.color,
-          roughness: 0.3,
-          metalness: 0.1
+          roughness: 0.2,
+          metalness: 0.2
         });
         const mesh = new THREE.Mesh(geom, mat);
         
@@ -408,7 +519,7 @@
 
       scene.add(organGroup);
 
-      // Mouse Drag Rotation
+      // Mouse/Touch Drag Rotation
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
 
