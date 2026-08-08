@@ -63,7 +63,8 @@
         <!-- Navigation Header -->
         <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                <!-- Brand Logo (Exact Specification) -->
+                
+                <!-- FontAwesome DNA Logo -->
                 <a href="https://bioprint-eight.vercel.app/main" class="flex items-center space-x-3 group">
                     <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner group-hover:border-emerald-400 transition-colors">
                         <i class="fa-solid fa-dna text-xl group-hover:rotate-12 transition-transform"></i>
@@ -305,7 +306,7 @@
 
                             <!-- Live Search Input Form -->
                             <form id="rx-form" class="flex gap-2">
-                                <input type="text" id="rx-input" placeholder="e.g. Lisinopril, Ibuprofen, 67balls123" 
+                                <input type="text" id="rx-input" placeholder="e.g. Lisinopril, Ibuprofen" 
                                        class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
                                 <button type="submit" id="rx-btn" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0">
                                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -464,8 +465,8 @@
     <footer class="border-t border-slate-800/80 bg-slate-950 py-12 px-6">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-slate-500 gap-6">
             <div class="flex items-center space-x-3">
-                <div class="h-6 w-6 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">
-                    <i class="fa-solid fa-dna"></i>
+                <div class="h-7 w-7 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-dna text-xs"></i>
                 </div>
                 <span class="text-slate-300 font-bold">BioPrint Vault v2.0</span>
             </div>
@@ -488,7 +489,6 @@
                 const term = rxInput.value.trim();
                 if (!term) return;
 
-                // Set Loading State
                 rxBtn.disabled = true;
                 rxOutput.className = "p-3 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono space-y-1";
                 rxOutput.innerHTML = `
@@ -499,7 +499,6 @@
                 `;
 
                 try {
-                    // Call official NIH RxNorm API
                     const res = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(term)}`);
                     const data = await res.json();
                     
@@ -507,7 +506,6 @@
                     if (idGroup && idGroup.rxnormId && idGroup.rxnormId.length > 0) {
                         const rxcui = idGroup.rxnormId[0];
 
-                        // Get details for valid concept
                         const detailsRes = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/properties.json`);
                         const detailsData = await detailsRes.json();
                         const props = detailsData.properties || {};
@@ -522,7 +520,6 @@
                             <div class="text-slate-400">RxCUI: <span class="text-emerald-300">${rxcui}</span> | TTY: ${props.tty || 'N/A'}</div>
                         `;
                     } else {
-                        // Unrecognized drug name (e.g. 67balls123)
                         rxOutput.className = "p-3 bg-red-950/30 border border-red-800/50 rounded-lg text-xs font-mono space-y-1";
                         rxOutput.innerHTML = `
                             <div class="font-bold text-red-400 flex items-center gap-1.5">
