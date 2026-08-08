@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL || '[https://autdyccwpbxkgyzwlihg.supabase.co](https://autdyccwpbxkgyzwlihg.supabase.co)';
+    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://autdyccwpbxkgyzwlihg.supabase.co';
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
