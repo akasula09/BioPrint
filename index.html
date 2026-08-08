@@ -19,7 +19,6 @@
             --accent-emerald: #10b981;
             --accent-cyan: #06b6d4;
             --accent-rose: #f43f5e;
-            --accent-amber: #f59e0b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -40,7 +39,6 @@
                 radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
         }
 
-        /* Top Bar */
         header {
             background: rgba(11, 19, 41, 0.8);
             backdrop-filter: blur(12px);
@@ -83,14 +81,12 @@
             box-shadow: 0 0 10px var(--accent-emerald);
         }
 
-        /* App Container Layout */
         .app-layout {
             display: flex;
             flex: 1;
             height: calc(100vh - 53px);
         }
 
-        /* Sidebar Navigation Controls */
         .sidebar {
             width: 320px;
             border-right: 1px solid var(--border-color);
@@ -134,7 +130,6 @@
 
         .sidebar-content.active { display: block; }
 
-        /* Upload Zone */
         .drop-zone {
             border: 2px dashed rgba(255, 255, 255, 0.15);
             border-radius: 0.75rem;
@@ -148,10 +143,8 @@
         .drop-zone:hover {
             border-color: var(--accent-emerald);
             background: rgba(16, 185, 129, 0.05);
-            transform: translateY(-2px);
         }
 
-        /* Right Workspace Tab-Centric Viewer */
         .workspace {
             flex: 1;
             display: flex;
@@ -159,7 +152,6 @@
             background: rgba(3, 7, 18, 0.6);
         }
 
-        /* Document Header Tabs (Notepad Style Tabs) */
         .doc-tabs {
             display: flex;
             background: rgba(11, 19, 41, 0.8);
@@ -181,7 +173,6 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s;
         }
 
         .doc-tab.active {
@@ -191,7 +182,6 @@
             border-top: 2px solid var(--accent-emerald);
         }
 
-        /* Document Viewer Main Body */
         .doc-viewer {
             flex: 1;
             padding: 2rem;
@@ -216,21 +206,15 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            transition: all 0.2s;
         }
 
-        .btn:hover {
-            background: #1e293b;
-            border-color: rgba(255, 255, 255, 0.2);
-        }
+        .btn:hover { background: #1e293b; }
 
         .btn-primary {
             background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
             color: #030712;
             border: none;
         }
-
-        .btn-primary:hover { opacity: 0.9; }
 
         .card-panel {
             background: var(--bg-card);
@@ -239,7 +223,6 @@
             border-radius: 0.875rem;
             padding: 1.25rem;
             margin-bottom: 1.25rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .panel-title {
@@ -314,14 +297,12 @@
     </header>
 
     <div class="app-layout">
-        <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-tabs">
-                <button class="sidebar-tab-btn active" onclick="switchSidebarTab('upload')">Ingest File</button>
-                <button class="sidebar-tab-btn" onclick="switchSidebarTab('vitals')">Vitals Trend</button>
+                <button class="sidebar-tab-btn active" onclick="switchSidebarTab(this, 'upload')">Ingest File</button>
+                <button class="sidebar-tab-btn" onclick="switchSidebarTab(this, 'vitals')">Vitals Trend</button>
             </div>
 
-            <!-- Upload Tab -->
             <div id="tab-upload" class="sidebar-content active">
                 <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
                     <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFile(this.files[0])">
@@ -341,7 +322,6 @@
                 </div>
             </div>
 
-            <!-- Dynamic Vitals Trend Tab -->
             <div id="tab-vitals" class="sidebar-content">
                 <div class="panel-title">Dynamic Vitals Plot</div>
                 <div id="sidebarTrendContainer" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">
@@ -350,7 +330,6 @@
             </div>
         </aside>
 
-        <!-- Main Workspace (Tab-Centric File Interface) -->
         <main class="workspace">
             <div id="docTabs" class="doc-tabs">
                 <div class="doc-tab active">Overview</div>
@@ -380,6 +359,16 @@
     let logs = [];
     let selectedLogIndex = 0;
 
+    function sanitize(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         fetchLogs();
         if (dbClient) {
@@ -402,12 +391,13 @@
         }
     }
 
-    function switchSidebarTab(tabId) {
+    function switchSidebarTab(btnElement, tabId) {
         document.querySelectorAll('.sidebar-tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
         
-        event.target.classList.add('active');
-        document.getElementById(`tab-${tabId}`).classList.add('active');
+        btnElement.classList.add('active');
+        const targetTab = document.getElementById(`tab-${tabId}`);
+        if (targetTab) targetTab.classList.add('active');
     }
 
     function renderTabs() {
@@ -419,7 +409,7 @@
 
         docTabsBar.innerHTML = logs.map((log, i) => `
             <div class="doc-tab ${i === selectedLogIndex ? 'active' : ''}" onclick="selectDocTab(${i})">
-                <span>📄</span> ${escapeHtml(log.file_name)}
+                <span>📄</span> ${sanitize(log.file_name)}
             </div>
         `).join('');
     }
@@ -444,52 +434,57 @@
         const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
         const vitals = log.vitals || [];
 
-        content.innerHTML = `
+        let html = `
             <div class="toolbar">
                 <button class="btn btn-primary" onclick="exportPDF(${index})">📄 Export PDF Report</button>
-                <button class="btn" onclick="speakText('${escapeHtml(log.summary)}')">🔊 Audio Synthesis</button>
+                <button class="btn" onclick="speakText(${index})">🔊 Audio Synthesis</button>
             </div>
 
             <div class="card-panel">
                 <div class="panel-title">
                     <span>Clinical Summary</span>
                     <span style="color: ${log.urgency_rating >= 4 ? 'var(--accent-rose)' : 'var(--accent-emerald)'}; font-family: var(--font-code);">
-                        Urgency Score: ${log.urgency_rating}/5
+                        Urgency Score: ${sanitize(log.urgency_rating)}/5
                     </span>
                 </div>
-                <p style="font-size:0.875rem; line-height: 1.6;">${escapeHtml(log.summary)}</p>
+                <p style="font-size:0.875rem; line-height: 1.6;">${sanitize(log.summary)}</p>
             </div>
+        `;
 
-            ${vitals.length > 0 ? `
+        if (vitals.length > 0) {
+            html += `
                 <div class="card-panel">
                     <div class="panel-title">Extracted Vital Measurements</div>
                     <div class="vitals-grid">
                         ${vitals.map(v => `
                             <div class="vital-card">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHtml(v.metric)}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted);">${sanitize(v.metric)}</div>
                                 <div style="font-size:0.95rem; font-weight:700; font-family:var(--font-code); margin-top:0.2rem; color: ${v.isAnomaly ? 'var(--accent-rose)' : 'var(--accent-cyan)'}">
-                                    ${v.value} <span style="font-size:0.65rem; font-weight:normal;">${escapeHtml(v.unit)}</span>
+                                    ${sanitize(v.value)} <span style="font-size:0.65rem; font-weight:normal;">${sanitize(v.unit)}</span>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
                 </div>
-            ` : ''}
+            `;
+        }
 
-            ${jargon.length > 0 ? `
+        if (jargon.length > 0) {
+            html += `
                 <div class="card-panel">
                     <div class="panel-title">Plain-English Diagnostic Translations</div>
                     <div class="jargon-grid">
                         ${jargon.map(([term, def]) => `
                             <div class="jargon-item">
-                                <strong style="color:var(--accent-cyan);">${escapeHtml(term)}:</strong> ${escapeHtml(def)}
+                                <strong style="color:var(--accent-cyan);">${sanitize(term)}:</strong> ${sanitize(def)}
                             </div>
                         `).join('')}
                     </div>
                 </div>
-            ` : ''}
-        `;
+            `;
+        }
 
+        content.innerHTML = html;
         renderDynamicChart(vitals);
     }
 
@@ -562,10 +557,12 @@
         });
     }
 
-    function speakText(text) {
+    function speakText(index) {
+        const log = logs[index];
+        if (!log || !log.summary) return;
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(log.summary);
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -577,7 +574,7 @@
         printWin.document.write(`
             <html>
             <head>
-                <title>Diagnostic Brief - ${escapeHtml(log.file_name)}</title>
+                <title>Diagnostic Brief - ${sanitize(log.file_name)}</title>
                 <style>
                     body { font-family: sans-serif; padding: 24px; line-height: 1.6; color: #0f172a; }
                     h1 { color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
@@ -586,22 +583,17 @@
             </head>
             <body>
                 <h1>BioPrint Diagnostic Report</h1>
-                <p><strong>Document:</strong> ${escapeHtml(log.file_name)}</p>
+                <p><strong>Document:</strong> ${sanitize(log.file_name)}</p>
                 <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
-                <p><strong>Urgency Rating:</strong> ${log.urgency_rating}/5</p>
+                <p><strong>Urgency Rating:</strong> ${sanitize(log.urgency_rating)}/5</p>
                 <div class="box">
                     <h3>Summary Brief</h3>
-                    <p>${escapeHtml(log.summary)}</p>
+                    <p>${sanitize(log.summary)}</p>
                 </div>
                 <script>window.onload = function() { window.print(); }</script>
             </body>
             </html>
         `);
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 </script>
 </body>
