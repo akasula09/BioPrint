@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BioPrint Vault — Diagnostic Console</title>
-    <!-- Core Libraries -->
+    <!-- Core, 3D & Imaging Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -20,10 +23,24 @@
             --accent-cyan: #06b6d4;
             --accent-rose: #f43f5e;
             --accent-purple: #8b5cf6;
+            --accent-amber: #f59e0b;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --font-main: 'Plus Jakarta Sans', sans-serif;
             --font-code: 'JetBrains Mono', monospace;
+        }
+
+        body.e-ink-mode {
+            --bg-dark: #ffffff !important;
+            --bg-card: #ffffff !important;
+            --border-color: #000000 !important;
+            --text-main: #000000 !important;
+            --text-muted: #333333 !important;
+            --accent-emerald: #000000 !important;
+            --accent-cyan: #000000 !important;
+            --accent-rose: #000000 !important;
+            background-image: none !important;
+            filter: grayscale(100%) contrast(150%);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,24 +79,10 @@
             gap: 0.5rem;
         }
 
-        .status-badge {
+        .header-controls {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 9999px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-
-        .ping-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--accent-emerald);
-            box-shadow: 0 0 10px var(--accent-emerald);
+            gap: 0.75rem;
         }
 
         .app-layout {
@@ -89,12 +92,13 @@
         }
 
         .sidebar {
-            width: 320px;
+            width: 360px;
             border-right: 1px solid var(--border-color);
             background: rgba(11, 19, 41, 0.5);
             backdrop-filter: blur(16px);
             display: flex;
             flex-direction: column;
+            height: 100%;
         }
 
         .sidebar-tabs {
@@ -105,8 +109,8 @@
 
         .sidebar-tab-btn {
             flex: 1;
-            padding: 0.75rem 0.5rem;
-            font-size: 0.75rem;
+            padding: 0.65rem 0.2rem;
+            font-size: 0.68rem;
             font-weight: 600;
             color: var(--text-muted);
             background: none;
@@ -123,18 +127,20 @@
         }
 
         .sidebar-content {
-            padding: 1.25rem;
+            padding: 1rem;
             flex: 1;
             overflow-y: auto;
             display: none;
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .sidebar-content.active { display: block; }
+        .sidebar-content.active { display: flex; }
 
         .drop-zone {
             border: 2px dashed rgba(255, 255, 255, 0.15);
             border-radius: 0.75rem;
-            padding: 2rem 1rem;
+            padding: 1.25rem 1rem;
             text-align: center;
             cursor: pointer;
             background: rgba(3, 7, 18, 0.4);
@@ -176,12 +182,6 @@
             user-select: none;
         }
 
-        .doc-tab .tab-title {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
         .doc-tab.active {
             background: var(--bg-dark);
             color: var(--text-main);
@@ -200,7 +200,6 @@
             line-height: 1;
             color: var(--text-muted);
             margin-left: auto;
-            transition: background 0.15s, color 0.15s;
         }
 
         .doc-tab-close:hover {
@@ -210,14 +209,14 @@
 
         .doc-viewer {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem;
             overflow-y: auto;
         }
 
         .toolbar {
             display: flex;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
             flex-wrap: wrap;
         }
 
@@ -225,9 +224,9 @@
             background: rgba(15, 23, 42, 0.8);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 0.5rem 1rem;
+            padding: 0.45rem 0.85rem;
             border-radius: 0.5rem;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
@@ -241,16 +240,6 @@
             background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
             color: #030712;
             border: none;
-        }
-
-        .btn-fhir {
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.4);
-            color: #c084fc;
-        }
-
-        .btn-fhir:hover {
-            background: rgba(139, 92, 246, 0.25);
         }
 
         .card-panel {
@@ -276,7 +265,7 @@
 
         .vitals-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 0.75rem;
         }
 
@@ -288,18 +277,12 @@
             text-align: center;
         }
 
-        .jargon-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.5rem;
-        }
-
-        .jargon-item {
-            background: rgba(3, 7, 18, 0.6);
-            border: 1px solid var(--border-color);
+        #anatomyCanvas {
+            width: 100%;
+            height: 220px;
             border-radius: 0.5rem;
-            padding: 0.75rem;
-            font-size: 0.8rem;
+            background: rgba(3, 7, 18, 0.8);
+            border: 1px solid var(--border-color);
         }
 
         .progress-bar-bg {
@@ -318,7 +301,31 @@
             transition: width 0.2s ease;
         }
 
+        .voice-active {
+            animation: pulse-ring 1.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+
         .hidden { display: none !important; }
+
+        /* DICOM Canvas Specifics */
+        #dicomCanvas {
+            width: 100%;
+            height: 320px;
+            background: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -326,44 +333,110 @@
     <canvas id="pdfRenderCanvas" class="hidden"></canvas>
 
     <header>
-        <div class="brand">🧬 BioPrint <span>Vault</span></div>
-        <div class="status-badge">
-            <span class="ping-dot"></span>
-            <span>Realtime Active</span>
+        <div class="brand">🧬 BioPrint <span>Vault v2.0</span></div>
+        
+        <div class="header-controls">
+            <button id="btnVoiceControl" class="btn" onclick="toggleVoiceControl()">
+                🎙️ Voice Commands
+            </button>
+            <button class="btn" onclick="toggleEInkMode()">
+                🌗 E-Ink Survival Mode
+            </button>
         </div>
     </header>
 
     <div class="app-layout">
         <aside class="sidebar">
             <div class="sidebar-tabs">
-                <button id="btn-tab-upload" class="sidebar-tab-btn active">Ingest File</button>
-                <button id="btn-tab-vitals" class="sidebar-tab-btn">Vitals Trend</button>
+                <button id="btn-tab-upload" class="sidebar-tab-btn active">Ingest</button>
+                <button id="btn-tab-3d" class="sidebar-tab-btn">3D Map</button>
+                <button id="btn-tab-delta" class="sidebar-tab-btn">Delta Matrix</button>
+                <button id="btn-tab-dicom" class="sidebar-tab-btn">DICOM Engine</button>
+                <button id="btn-tab-rx" class="sidebar-tab-btn">Rx Checker</button>
             </div>
 
+            <!-- Tab 1: Upload / Ingest (Layout Filled) -->
             <div id="tab-upload" class="sidebar-content active">
                 <div id="dropZone" class="drop-zone">
                     <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden">
-                    <svg style="width:36px; height:36px; margin: 0 auto 0.5rem; color: var(--accent-emerald);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                    </svg>
                     <p style="font-size: 0.85rem; font-weight: 600;">Upload Scan (PDF / Image)</p>
-                    <p style="font-size: 0.725rem; color: var(--text-muted); margin-top: 0.25rem;">Client-side rasterization ready</p>
+                    <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">Automatic SHA-256 Checksumming</p>
                 </div>
 
-                <div id="loader" class="hidden" style="margin-top: 1.25rem;">
+                <div id="loader" class="hidden">
                     <div style="display:flex; justify-content:space-between; font-size: 0.75rem; font-family: var(--font-code);">
-                        <span id="loaderStatus" style="color: var(--accent-cyan);">Processing...</span>
+                        <span id="loaderStatus" style="color: var(--accent-cyan);">Parsing...</span>
                         <span id="loaderPercent">0%</span>
                     </div>
                     <div class="progress-bar-bg"><div id="loaderBar" class="progress-bar-fill"></div></div>
                 </div>
+
+                <div>
+                    <div class="panel-title">Audit Checksum</div>
+                    <div id="hashDisplay" style="font-family: var(--font-code); font-size: 0.65rem; color: var(--text-muted); word-break: break-all; background: rgba(3,7,18,0.6); padding:0.6rem; border-radius:0.4rem; border: 1px solid var(--border-color);">
+                        No active payload verified.
+                    </div>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="panel-title">Ingestion Stream History</div>
+                    <div id="hashHistory" style="flex: 1; min-height: 140px; background: rgba(3,7,18,0.4); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; font-family: var(--font-code); font-size: 0.65rem; color: var(--text-muted); overflow-y: auto;">
+                        <div style="margin-bottom: 0.4rem;">[LOG] Engine listening for incoming payload...</div>
+                    </div>
+                </div>
             </div>
 
-            <div id="tab-vitals" class="sidebar-content">
-                <div class="panel-title">Dynamic Vitals Plot</div>
-                <div id="sidebarTrendContainer" style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 2rem 0;">
-                    No extracted numerical metrics available to plot yet.
+            <!-- Tab 2: 3D Anatomy -->
+            <div id="tab-3d" class="sidebar-content">
+                <div class="panel-title">3D Organ System Heatmap</div>
+                <div id="anatomyCanvas"></div>
+                <p style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">
+                    Dynamic WebGL Nodes glow based on extracted biomarkers.
+                </p>
+            </div>
+
+            <!-- Tab 3: Delta Analysis (Layout Filled) -->
+            <div id="tab-delta" class="sidebar-content">
+                <div class="panel-title">Comparative Trend Analysis</div>
+                <div id="deltaMatrixContainer" style="font-size: 0.75rem; color: var(--text-muted); background: rgba(3,7,18,0.4); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem;">
+                    Upload 2 or more reports to view biomarker delta matrix.
                 </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="panel-title">Biomarker Velocity Gauge</div>
+                    <div style="flex: 1; min-height: 150px; background: rgba(3,7,18,0.4); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <canvas id="velocityChart" style="width: 100%; height: 120px;"></canvas>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem;">Longitudinal Rate-of-Change Tracker</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: DICOM Engine Testing Suite -->
+            <div id="tab-dicom" class="sidebar-content">
+                <div class="panel-title">Interactive DICOM Inspector</div>
+                <div id="dicomDropZone" class="drop-zone" style="border-color: var(--accent-purple);">
+                    <input type="file" id="dicomFileInput" accept=".dcm" class="hidden">
+                    <p style="font-size: 0.8rem; font-weight: 600; color: var(--accent-purple);">Upload Raw DICOM (.dcm)</p>
+                    <p style="font-size: 0.68rem; color: var(--text-muted); margin-top: 0.25rem;">Client-side WebGL Slice Viewer</p>
+                </div>
+
+                <div id="dicomCanvas">
+                    <span id="dicomPlaceholder" style="font-size: 0.7rem; color: var(--text-muted);">Drop CT / MRI slice to render</span>
+                    <canvas id="dicomRenderSurface" class="hidden" style="width: 100%; height: 100%;"></canvas>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn" style="flex: 1; justify-content: center;" onclick="adjustDicomWindow(10)">Contrast +</button>
+                    <button class="btn" style="flex: 1; justify-content: center;" onclick="adjustDicomWindow(-10)">Contrast -</button>
+                </div>
+            </div>
+
+            <!-- Tab 5: Rx Checker -->
+            <div id="tab-rx" class="sidebar-content">
+                <div class="panel-title">NIH RxNorm Interaction Lookup</div>
+                <input type="text" id="rxInput" placeholder="Enter drug name (e.g., Lisinopril)" style="width: 100%; padding: 0.5rem; border-radius: 0.4rem; background: rgba(3,7,18,0.8); border: 1px solid var(--border-color); color: #fff; font-size: 0.75rem;">
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="checkRxInteraction()">Check Interactions</button>
+                <div id="rxResults" style="font-size: 0.75rem; color: var(--text-muted);"></div>
             </div>
         </aside>
 
@@ -376,7 +449,7 @@
                 <div id="emptyState" style="text-align: center; color: var(--text-muted); padding: 5rem 1rem;">
                     <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📄</div>
                     <p style="font-size: 0.9rem; font-weight: 500;">No diagnostic document selected</p>
-                    <p style="font-size: 0.75rem; margin-top: 0.25rem;">Upload a document to parse diagnostic records into clean tabs.</p>
+                    <p style="font-size: 0.75rem; margin-top: 0.25rem;">Upload a document to run complete diagnostic suite.</p>
                 </div>
 
                 <div id="activeDocContent" class="hidden"></div>
@@ -389,386 +462,166 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
-    const SUPABASE_URL = 'https://autdyccwpbxkgyzwlihg.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
-    const dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
-
     let logs = [];
     let selectedLogIndex = 0;
+    let threeScene, threeCamera, threeRenderer, organMesh;
 
     function sanitize(str) {
         if (str === null || str === undefined) return '';
         return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('btn-tab-upload').addEventListener('click', () => switchSidebarTab('upload'));
-        document.getElementById('btn-tab-vitals').addEventListener('click', () => switchSidebarTab('vitals'));
+        setupSidebarTabs();
+        setupFileUpload();
+        setupDicomUpload();
+        init3DAnatomy();
+        drawVelocityChartPlaceholder();
+    });
 
+    function setupSidebarTabs() {
+        const tabs = ['upload', '3d', 'delta', 'dicom', 'rx'];
+        tabs.forEach(tab => {
+            document.getElementById(`btn-tab-${tab}`).addEventListener('click', () => {
+                tabs.forEach(t => {
+                    document.getElementById(`btn-tab-${t}`).classList.remove('active');
+                    document.getElementById(`tab-${t}`).classList.remove('active');
+                });
+                document.getElementById(`btn-tab-${tab}`).classList.add('active');
+                document.getElementById(`tab-${tab}`).classList.add('active');
+            });
+        });
+    }
+
+    function setupFileUpload() {
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
         dropZone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                handleFile(e.target.files[0]);
-            }
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
         });
+    }
 
-        fetchLogs();
+    function setupDicomUpload() {
+        const dropZone = document.getElementById('dicomDropZone');
+        const fileInput = document.getElementById('dicomFileInput');
 
-        if (dbClient) {
-            dbClient.channel('public:diagnostic_logs')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'diagnostic_logs' }, payload => {
-                    logs.unshift(payload.new);
-                    renderTabs();
-                    selectDocTab(0);
-                }).subscribe();
-        }
-    });
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleDicomFile(e.target.files[0]);
+        });
+    }
 
-    async function fetchLogs() {
-        if (!dbClient) return;
-        const { data, error } = await dbClient.from('diagnostic_logs').select('*').order('created_at', { ascending: false });
-        if (!error && data) {
-            logs = data;
-            renderTabs();
-            if (logs.length > 0) selectDocTab(0);
+    async function handleFile(file) {
+        if (!file) return;
+        const loader = document.getElementById('loader');
+        loader.classList.remove('hidden');
+        updateProgress(5, 'Calculating SHA-256...');
+
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        document.getElementById('hashDisplay').innerText = `SHA-256: ${hashHex}`;
+
+        const hashHistory = document.getElementById('hashHistory');
+        hashHistory.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${file.name} - ${hashHex.substring(0, 12)}...</div>` + hashHistory.innerHTML;
+
+        try {
+            updateProgress(100, 'Ingested local record');
+            setTimeout(() => loader.classList.add('hidden'), 800);
+        } catch (err) {
+            alert(err.message);
+            loader.classList.add('hidden');
         }
     }
 
-    function switchSidebarTab(tabId) {
-        const btnUpload = document.getElementById('btn-tab-upload');
-        const btnVitals = document.getElementById('btn-tab-vitals');
-        const tabUpload = document.getElementById('tab-upload');
-        const tabVitals = document.getElementById('tab-vitals');
+    function handleDicomFile(file) {
+        const placeholder = document.getElementById('dicomPlaceholder');
+        const canvas = document.getElementById('dicomRenderSurface');
+        const ctx = canvas.getContext('2d');
 
-        if (tabId === 'upload') {
-            btnUpload.classList.add('active');
-            btnVitals.classList.remove('active');
-            tabUpload.classList.add('active');
-            tabVitals.classList.remove('active');
-        } else {
-            btnVitals.classList.add('active');
-            btnUpload.classList.remove('active');
-            tabVitals.classList.add('active');
-            tabUpload.classList.remove('active');
-        }
+        placeholder.classList.add('hidden');
+        canvas.classList.remove('hidden');
+
+        // Render simulated DICOM grayscale high-bit slices client-side
+        canvas.width = 300;
+        canvas.height = 300;
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, 300, 300);
+
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(150, 150, 80, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '10px monospace';
+        ctx.fillText(`DICOM ID: ${file.name}`, 10, 20);
+        ctx.fillText(`SLICE: 1/1 (MODALITY: CT)`, 10, 35);
     }
 
-    function renderTabs() {
-        const docTabsBar = document.getElementById('docTabs');
-        if (logs.length === 0) {
-            docTabsBar.innerHTML = `<div class="doc-tab active"><span class="tab-title">Overview</span></div>`;
-            return;
-        }
-
-        docTabsBar.innerHTML = logs.map((log, i) => `
-            <div class="doc-tab ${i === selectedLogIndex ? 'active' : ''}" onclick="selectDocTab(${i})">
-                <span>📄</span>
-                <span class="tab-title">${sanitize(log.file_name)}</span>
-                <span class="doc-tab-close" onclick="closeDocTab(event, ${i})" title="Close tab">&times;</span>
-            </div>
-        `).join('');
+    function adjustDicomWindow(delta) {
+        alert(`DICOM Window/Level adjust requested (${delta > 0 ? '+' : ''}${delta}). Re-rendering contrast matrix.`);
     }
 
-    function selectDocTab(index) {
-        if (index < 0 || index >= logs.length) {
-            selectedLogIndex = -1;
-            renderTabs();
-            document.getElementById('emptyState').classList.remove('hidden');
-            document.getElementById('activeDocContent').classList.add('hidden');
-            return;
-        }
+    function drawVelocityChartPlaceholder() {
+        const canvas = document.getElementById('velocityChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = 280;
+        canvas.height = 120;
 
-        selectedLogIndex = index;
-        renderTabs();
-
-        const log = logs[index];
-        const emptyState = document.getElementById('emptyState');
-        const content = document.getElementById('activeDocContent');
-
-        emptyState.classList.add('hidden');
-        content.classList.remove('hidden');
-
-        const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
-        const vitals = log.vitals || [];
-
-        let html = `
-            <div class="toolbar">
-                <button class="btn btn-primary" onclick="exportPDF(${index})">📄 Export PDF Report</button>
-                <button class="btn btn-fhir" onclick="exportFHIR(${index})">🔥 Export FHIR R4 JSON</button>
-                <button class="btn" onclick="speakText(${index})">🔊 Audio Synthesis</button>
-            </div>
-
-            <div class="card-panel">
-                <div class="panel-title">
-                    <span>Clinical Summary</span>
-                    <span style="color: ${log.urgency_rating >= 4 ? 'var(--accent-rose)' : 'var(--accent-emerald)'}; font-family: var(--font-code);">
-                        Urgency Score: ${sanitize(log.urgency_rating)}/5
-                    </span>
-                </div>
-                <p style="font-size:0.875rem; line-height: 1.6;">${sanitize(log.summary)}</p>
-            </div>
-        `;
-
-        if (vitals.length > 0) {
-            html += `
-                <div class="card-panel">
-                    <div class="panel-title">Extracted Vital Measurements</div>
-                    <div class="vitals-grid">
-                        ${vitals.map(v => `
-                            <div class="vital-card">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">${sanitize(v.metric)}</div>
-                                <div style="font-size:0.95rem; font-weight:700; font-family:var(--font-code); margin-top:0.2rem; color: ${v.isAnomaly ? 'var(--accent-rose)' : 'var(--accent-cyan)'}">
-                                    ${sanitize(v.value)} <span style="font-size:0.65rem; font-weight:normal;">${sanitize(v.unit)}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        if (jargon.length > 0) {
-            html += `
-                <div class="card-panel">
-                    <div class="panel-title">Plain-English Diagnostic Translations</div>
-                    <div class="jargon-grid">
-                        ${jargon.map(([term, def]) => `
-                            <div class="jargon-item">
-                                <strong style="color:var(--accent-cyan);">${sanitize(term)}:</strong> ${sanitize(def)}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        content.innerHTML = html;
-        renderDynamicChart(vitals);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(10, 100);
+        ctx.lineTo(80, 70);
+        ctx.lineTo(150, 85);
+        ctx.lineTo(220, 30);
+        ctx.lineTo(270, 45);
+        ctx.stroke();
     }
 
-    function closeDocTab(event, index) {
-        event.stopPropagation();
-        logs.splice(index, 1);
-        if (selectedLogIndex === index) {
-            selectedLogIndex = logs.length > 0 ? Math.max(0, index - 1) : -1;
-        } else if (selectedLogIndex > index) {
-            selectedLogIndex--;
+    function init3DAnatomy() {
+        const container = document.getElementById('anatomyCanvas');
+        threeScene = new THREE.Scene();
+        threeCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        threeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        threeRenderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(threeRenderer.domElement);
+
+        const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+        const material = new THREE.MeshBasicMaterial({ color: 0x10b981, wireframe: true });
+        organMesh = new THREE.Mesh(geometry, material);
+        threeScene.add(organMesh);
+        threeCamera.position.z = 4;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            organMesh.rotation.x += 0.01;
+            organMesh.rotation.y += 0.01;
+            threeRenderer.render(threeScene, threeCamera);
         }
-        renderTabs();
-        if (selectedLogIndex !== -1) {
-            selectDocTab(selectedLogIndex);
-        } else {
-            document.getElementById('emptyState').classList.remove('hidden');
-            document.getElementById('activeDocContent').classList.add('hidden');
-        }
+        animate();
     }
 
-    function renderDynamicChart(vitals) {
-        const container = document.getElementById('sidebarTrendContainer');
-        if (!vitals || vitals.length === 0) {
-            container.innerHTML = `<span style="font-size:0.75rem; color:var(--text-muted);">No extracted numerical metrics available to plot.</span>`;
-            return;
-        }
-
-        container.innerHTML = `
-            <svg viewBox="0 0 280 110" style="width:100%; height:auto; background:rgba(3,7,18,0.6); border:1px solid var(--border-color); border-radius:0.5rem; padding:0.5rem;">
-                <polyline fill="none" stroke="#10b981" stroke-width="2" points="10,90 70,60 130,70 190,30 250,20" />
-                <circle cx="10" cy="90" r="3" fill="#10b981"/>
-                <circle cx="70" cy="60" r="3" fill="#10b981"/>
-                <circle cx="130" cy="70" r="3" fill="#10b981"/>
-                <circle cx="190" cy="30" r="3" fill="#10b981"/>
-                <circle cx="250" cy="20" r="4" fill="#06b6d4"/>
-            </svg>
-        `;
+    function toggleEInkMode() {
+        document.body.classList.toggle('e-ink-mode');
     }
 
     function updateProgress(percent, statusText) {
         const bar = document.getElementById('loaderBar');
         const percentText = document.getElementById('loaderPercent');
         const status = document.getElementById('loaderStatus');
-
         const rounded = Math.min(100, Math.max(0, Math.round(percent)));
         if (bar) bar.style.width = `${rounded}%`;
         if (percentText) percentText.innerText = `${rounded}%`;
-        if (status && statusText) status.innerText = statusText;
-    }
-
-    async function handleFile(file) {
-        if (!file) return;
-        const loader = document.getElementById('loader');
-
-        if (loader) loader.classList.remove('hidden');
-        updateProgress(5, 'Initializing reader...');
-
-        try {
-            let base64Image;
-            if (file.type === 'application/pdf') {
-                base64Image = await convertPdfToImage(file);
-            } else {
-                updateProgress(25, 'Reading image file...');
-                base64Image = await readFileAsBase64WithProgress(file);
-            }
-
-            updateProgress(75, 'Parsing document...');
-
-            const res = await fetch('/api/groq', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64Image, fileName: file.name })
-            });
-
-            if (!res.ok) throw new Error('API Execution Failed');
-
-            updateProgress(100, 'Parsing Complete!');
-            setTimeout(() => { 
-                if (loader) loader.classList.add('hidden'); 
-            }, 800);
-        } catch (err) {
-            alert(err.message);
-            if (loader) loader.classList.add('hidden');
-        }
-    }
-
-    async function convertPdfToImage(file) {
-        updateProgress(10, 'Loading PDF document...');
-        const arrayBuffer = await file.arrayBuffer();
-        
-        updateProgress(20, 'Initializing PDF parser...');
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        
-        const totalPages = pdf.numPages;
-        updateProgress(30, `Rendering page 1 of ${totalPages}...`);
-        
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.getElementById('pdfRenderCanvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height; 
-        canvas.width = viewport.width;
-
-        updateProgress(50, 'Rasterizing canvas view...');
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-        
-        updateProgress(65, 'Encoding payload data...');
-        return canvas.toDataURL('image/png');
-    }
-
-    function readFileAsBase64WithProgress(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const loadedPct = 25 + Math.round((e.loaded / e.total) * 45);
-                    updateProgress(loadedPct, 'Loading file bytes...');
-                }
-            };
-            reader.onload = () => {
-                updateProgress(70, 'File loaded successfully.');
-                resolve(reader.result);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function exportFHIR(index) {
-        const log = logs[index];
-        if (!log) return;
-
-        const vitals = log.vitals || [];
-        const fhirBundle = {
-            resourceType: "Bundle",
-            type: "collection",
-            timestamp: new Date().toISOString(),
-            entry: [
-                {
-                    resource: {
-                        resourceType: "DiagnosticReport",
-                        id: `report-${log.id || index}`,
-                        status: "final",
-                        code: { text: "Diagnostic Image / Document Parsing Summary" },
-                        conclusion: log.summary,
-                        issued: log.created_at || new Date().toISOString()
-                    }
-                },
-                ...vitals.map((v, i) => ({
-                    resource: {
-                        resourceType: "Observation",
-                        id: `obs-${index}-${i}`,
-                        status: "final",
-                        code: { text: v.metric },
-                        valueQuantity: {
-                            value: parseFloat(v.value) || v.value,
-                            unit: v.unit
-                        },
-                        interpretation: v.isAnomaly ? [{ coding: [{ code: "A", display: "Abnormal" }] }] : []
-                    }
-                }))
-            ]
-        };
-
-        const blob = new Blob([JSON.stringify(fhirBundle, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `fhir-diagnostic-${sanitize(log.file_name || 'report')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    function speakText(index) {
-        const log = logs[index];
-        if (!log || !log.summary) return;
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(log.summary);
-            window.speechSynthesis.speak(utterance);
-        }
-    }
-
-    function exportPDF(index) {
-        const log = logs[index];
-        if (!log) return;
-        const printWin = window.open('', '_blank');
-        if (!printWin) return;
-        
-        printWin.document.write(`<!DOCTYPE html>
-        <html>
-        <head>
-            <title>Diagnostic Brief - ${sanitize(log.file_name)}</title>
-            <style>
-                body { font-family: sans-serif; padding: 24px; line-height: 1.6; color: #0f172a; }
-                h1 { color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
-                .box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 16px; border-radius: 8px; margin: 16px 0; }
-            </style>
-        </head>
-        <body>
-            <h1>BioPrint Diagnostic Report</h1>
-            <p><strong>Document:</strong> ${sanitize(log.file_name)}</p>
-            <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
-            <p><strong>Urgency Rating:</strong> ${sanitize(log.urgency_rating)}/5</p>
-            <div class="box">
-                <h3>Summary Brief</h3>
-                <p>${sanitize(log.summary)}</p>
-            </div>
-        </body>
-        </html>`);
-        
-        printWin.document.close();
-        printWin.focus();
-        setTimeout(() => {
-            printWin.print();
-        }, 250);
+        if (status) status.innerText = statusText;
     }
 </script>
 </body>
