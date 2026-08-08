@@ -6,6 +6,8 @@
     <title>BioPrint Diagnostic Vault — Production AI Platform</title>
     <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- PDF.js Library for Client-Side Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
@@ -74,7 +76,7 @@
             box-shadow: 0 0 8px var(--accent-emerald);
         }
 
-        /* Main Workspace Grid */
+        /* Workspace Layout */
         .workspace {
             max-width: 1280px;
             margin: 0 auto;
@@ -106,7 +108,7 @@
             margin-bottom: 0.25rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: space-between;
         }
 
         .card-subtitle {
@@ -115,7 +117,7 @@
             margin-bottom: 1rem;
         }
 
-        /* Drag and Drop Zone */
+        /* Drag & Drop */
         .drop-zone {
             border: 2px dashed #334155;
             border-radius: 0.75rem;
@@ -126,31 +128,19 @@
             background: rgba(3, 7, 18, 0.4);
         }
 
-        .drop-zone:hover, .drop-zone.active {
+        .drop-zone:hover {
             border-color: var(--accent-emerald);
             background: rgba(16, 185, 129, 0.05);
         }
 
-        /* SVG Vector Canvas Box */
-        .chart-box {
-            background: #030712;
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-
-        /* Feed List Cards */
+        /* Feeds and Components */
         .feed-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 0.875rem;
             padding: 1.25rem;
             margin-bottom: 1rem;
-            transition: border-color 0.2s ease;
         }
-
-        .feed-card:hover { border-color: #334155; }
 
         .feed-header {
             display: flex;
@@ -179,6 +169,22 @@
             border-color: rgba(244, 63, 94, 0.2);
         }
 
+        .action-btn {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.4rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .action-btn:hover { background: #1e293b; }
+
         .doctor-flag {
             background: rgba(244, 63, 94, 0.1);
             border: 1px solid rgba(244, 63, 94, 0.2);
@@ -189,7 +195,7 @@
             margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: space-between;
         }
 
         .vitals-grid {
@@ -232,39 +238,58 @@
             transition: width 0.3s ease;
         }
 
+        .lang-select {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+        }
+
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
+    <!-- Hidden Canvas element used by PDF.js to convert PDF pages to Image PNGs -->
+    <canvas id="pdfRenderCanvas" class="hidden"></canvas>
+
     <!-- Top Navigation Header -->
     <header class="navbar">
         <div>
             <div class="brand-title">BioPrint Vault</div>
-            <div style="font-size: 0.7rem; color: var(--text-muted);">AI for Health • Production Architecture</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">AI for Health • Microsoft ICJ Project</div>
         </div>
-        <div class="status-badge">
-            <span class="ping-dot"></span>
-            <span id="statusText">Realtime Active</span>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <select id="langSelect" class="lang-select" onchange="renderLogs()">
+                <option value="en">English (US)</option>
+                <option value="es">Español</option>
+                <option value="zh">中文 (Chinese)</option>
+            </select>
+            <div class="status-badge">
+                <span class="ping-dot"></span>
+                <span id="statusText">Realtime Active</span>
+            </div>
         </div>
     </header>
 
     <!-- Main Workspace -->
     <main class="workspace">
 
-        <!-- Left Column: Ingestion and Geometry Chart -->
+        <!-- Left Column: Ingestion and Pure Code Geometry Chart -->
         <div>
             <div class="card">
-                <div class="card-title">Document Ingestion Zone</div>
-                <div class="card-subtitle">Upload medical reports directly to your Vercel Serverless Function.</div>
+                <div class="card-title">Document Ingestion Layer</div>
+                <div class="card-subtitle">Upload medical reports (PNG, JPG, or PDF scans).</div>
 
                 <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
                     <input type="file" id="fileInput" accept="image/*,.pdf" class="hidden" onchange="handleFile(this.files[0])">
                     <svg style="width: 40px; height: 40px; margin: 0 auto 0.5rem; color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    <p style="font-size: 0.875rem; font-weight: 500;">Click or Drag Diagnostic Scan Here</p>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Secure Server-Side Groq Engine</p>
+                    <p style="font-size: 0.875rem; font-weight: 500;">Click or Drag PDF / Image Diagnostic Scan</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Automatic Client-Side PDF Rasterization Enabled</p>
                 </div>
 
                 <!-- Processing Loader -->
@@ -282,8 +307,8 @@
             <!-- Pure SVG Trend Geometry Box -->
             <div class="card">
                 <div class="card-title">Pure Code Geometry Chart</div>
-                <div class="card-subtitle">Historical Fasting Blood Glucose (mg/dL)</div>
-                <div class="chart-box">
+                <div class="card-subtitle">Historical Fasting Blood Glucose Tracking (mg/dL)</div>
+                <div style="background: #030712; border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
                     <svg viewBox="0 0 500 150" style="width: 100%; height: auto; overflow: visible;">
                         <line x1="20" y1="20" x2="480" y2="20" stroke="#1e293b" stroke-dasharray="4 4"/>
                         <line x1="20" y1="65" x2="480" y2="65" stroke="#1e293b" stroke-dasharray="4 4"/>
@@ -308,7 +333,7 @@
 
             <div id="logsContainer">
                 <div class="feed-card" style="text-align: center; color: var(--text-muted); font-size: 0.875rem; padding: 3rem;">
-                    No diagnostic records ingested yet. Drop a scan to execute server route parsing.
+                    No diagnostic records ingested yet. Upload a PDF or PNG scan to analyze.
                 </div>
             </div>
         </div>
@@ -316,6 +341,9 @@
     </main>
 
     <script>
+        // Set PDF.js Worker Source
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         const SUPABASE_URL = 'https://kx6ir81mnlo9oxumgbfg.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -353,7 +381,7 @@
 
             if (logs.length === 0) return;
 
-            container.innerHTML = logs.map(log => {
+            container.innerHTML = logs.map((log, index) => {
                 const isHigh = log.urgency_rating >= 4 || log.requires_doctor_flag;
                 const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
                 const vitals = log.vitals || [];
@@ -374,14 +402,18 @@
 
                         ${log.requires_doctor_flag ? `
                             <div class="doctor-flag">
-                                ⚠️ <strong>Doctor Review Recommended:</strong> Abnormal thresholds identified.
+                                <div>⚠️ <strong>Doctor Review Required:</strong> High risk anomalies detected.</div>
+                                <button class="action-btn" onclick="exportEmergencyReport(${index})">📄 Export Medical Summary</button>
                             </div>
                         ` : ''}
 
                         ${log.summary ? `
-                            <p style="font-size: 0.8rem; background: #030712; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
-                                ${escapeHtml(log.summary)}
-                            </p>
+                            <div style="background: #030712; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                                <p style="font-size: 0.8rem;">${escapeHtml(log.summary)}</p>
+                                <button class="action-btn" style="margin-top: 0.5rem;" onclick="speakText('${escapeHtml(log.summary)}')">
+                                    🔊 Read Summary Out Loud
+                                </button>
+                            </div>
                         ` : ''}
 
                         ${vitals.length > 0 ? `
@@ -399,7 +431,7 @@
 
                         ${jargon.length > 0 ? `
                             <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
-                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Plain-English Translation</div>
+                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Plain-English Translation Dictionary</div>
                                 ${jargon.map(([term, def]) => `
                                     <div class="jargon-item">
                                         <strong style="color: var(--accent-cyan);">${escapeHtml(term)}:</strong> ${escapeHtml(def)}
@@ -412,6 +444,7 @@
             }).join('');
         }
 
+        // Handle Image OR PDF Processing
         async function handleFile(file) {
             if (!file) return;
 
@@ -421,42 +454,110 @@
             const status = document.getElementById('loaderStatus');
 
             loader.classList.remove('hidden');
-            bar.style.width = '20%';
-            percent.innerText = '20%';
-            status.innerText = 'Encoding file payload...';
+            bar.style.width = '15%';
+            percent.innerText = '15%';
 
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64Image = reader.result;
+            try {
+                let base64Image = '';
+
+                if (file.type === 'application/pdf') {
+                    status.innerText = 'Rasterizing PDF page to PNG via PDF.js...';
+                    base64Image = await convertPdfToImage(file);
+                } else {
+                    status.innerText = 'Reading image payload...';
+                    base64Image = await readFileAsBase64(file);
+                }
 
                 bar.style.width = '50%';
                 percent.innerText = '50%';
-                status.innerText = 'Transmitting to Vercel Serverless Function...';
+                status.innerText = 'Executing serverless vision model parsing...';
 
-                try {
-                    const res = await fetch('/api/groq', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ base64Image, fileName: file.name })
-                    });
+                const res = await fetch('/api/groq', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base64Image, fileName: file.name })
+                });
 
-                    const result = await res.json();
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || 'Server processing failed');
 
-                    if (!res.ok) throw new Error(result.error || 'Server processing failed');
+                bar.style.width = '100%';
+                percent.innerText = '100%';
+                status.innerText = 'Analysis Complete!';
 
-                    bar.style.width = '100%';
-                    percent.innerText = '100%';
-                    status.innerText = 'Complete!';
+                setTimeout(() => loader.classList.add('hidden'), 1000);
 
-                    setTimeout(() => loader.classList.add('hidden'), 1000);
+            } catch (err) {
+                alert('Error processing document: ' + err.message);
+                loader.classList.add('hidden');
+            }
+        }
 
-                } catch (err) {
-                    alert('Error processing document: ' + err.message);
-                    loader.classList.add('hidden');
-                }
-            };
+        // PDF.js rasterizer: Reads Page 1 of PDF and draws to image data URL
+        async function convertPdfToImage(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1); // Render page 1
 
-            reader.readAsDataURL(file);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.getElementById('pdfRenderCanvas');
+            const context = canvas.getContext('2d');
+
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            return canvas.toDataURL('image/png');
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Feature 1: Speech Synthesis API for Accessibility
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis is not supported in this browser.');
+            }
+        }
+
+        // Feature 2: Clinical Summary Printable Export
+        function exportEmergencyReport(index) {
+            const log = logs[index];
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(`
+                <html>
+                <head>
+                    <title>Clinical Emergency Summary - ${log.file_name}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+                        h1 { color: #d97706; }
+                        .box { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>BioPrint Vault — Emergency Diagnostic Brief</h1>
+                    <p><strong>Document Name:</strong> ${log.file_name}</p>
+                    <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+                    <p><strong>Urgency Score:</strong> ${log.urgency_rating} / 5</p>
+                    <div class="box">
+                        <h3>Automated Diagnostic Summary:</h3>
+                        <p>${log.summary}</p>
+                    </div>
+                    <button onclick="window.print()">Print / Save as PDF</button>
+                </body>
+                </html>
+            `);
         }
 
         function escapeHtml(str) {
