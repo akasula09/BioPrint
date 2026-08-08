@@ -1,9 +1,39 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  'https://autdyccwpbxkgyzwlihg.supabase.co',
-  'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT'
-);
+// Correct Supabase Project URL
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://autdyccwpbxkgyzwlihg.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/**
+ * Helper function to safely extract and parse JSON from LLM responses
+ * Handles markdown fences (```json ... ```), trailing commas, and stray text.
+ */
+function cleanAndParseJSON(rawText) {
+  if (!rawText) throw new Error('Empty response received from LLM model.');
+
+  // 1. Strip markdown code blocks if present
+  let cleaned = rawText.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  }
+
+  // 2. Extract first valid JSON object payload bounds {...}
+  const firstMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (firstMatch) {
+    cleaned = firstMatch[0];
+  }
+
+  // 3. Fix common JSON formatting defects (e.g. trailing commas before } or ])
+  cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    throw new Error(`Failed to parse AI JSON response: ${err.message}. Raw output was: "${rawText.slice(0, 150)}..."`);
+  }
+}
 
 export default async function handler(req, res) {
   // CORS Headers
@@ -31,7 +61,7 @@ export default async function handler(req, res) {
     }
 
     // Call Groq Vision API via server-side key
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqResponse = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
@@ -41,12 +71,17 @@ export default async function handler(req, res) {
         model: 'qwen/qwen3.6-27b',
         messages: [
           {
+            role: 'system',
+            content: 'You are an expert clinical data extraction API. You MUST output strictly valid JSON matching the user prompt structure with no intro or commentary.'
+          },
+          {
             role: 'user',
             content: [
               {
                 type: 'text',
                 text: `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English. 
-Return ONLY a valid JSON object matching this schema EXACTLY:
+
+Return ONLY a raw JSON object matching this schema EXACTLY:
 {
   "summary": "<1-2 sentence plain-English summary of findings>",
   "urgency_rating": <number 1-5 where 5 is critical/severe>,
@@ -54,7 +89,7 @@ Return ONLY a valid JSON object matching this schema EXACTLY:
     "<medical term>": "<plain-English definition>"
   },
   "vitals": [
-    { "metric": "<Metric Name>", "value": <numeric value>, "unit": "<unit>", "isAnomaly": <boolean> }
+    { "metric": "<Metric Name>", "value": <numeric value or string>, "unit": "<unit>", "isAnomaly": <boolean> }
   ],
   "requires_doctor_flag": <boolean, true if urgency_rating >= 4 or critical anomaly exists>
 }`
@@ -78,7 +113,9 @@ Return ONLY a valid JSON object matching this schema EXACTLY:
 
     const groqData = await groqResponse.json();
     const rawContent = groqData.choices?.[0]?.message?.content;
-    const parsedData = JSON.parse(rawContent);
+
+    // Use our resilient JSON cleaner
+    const parsedData = cleanAndParseJSON(rawContent);
 
     // Persist parsed record into Supabase
     const { data: record, error: dbError } = await supabase
@@ -87,11 +124,11 @@ Return ONLY a valid JSON object matching this schema EXACTLY:
         {
           file_name: fileName || 'Diagnostic_Scan.png',
           patient_id: 'P-1042',
-          urgency_rating: parsedData.urgency_rating || 1,
+          urgency_rating: Number(parsedData.urgency_rating) || 1,
           summary: parsedData.summary || 'Scan processed successfully.',
           jargon_map: parsedData.jargon_map || {},
-          vitals: parsedData.vitals || [],
-          requires_doctor_flag: Boolean(parsedData.requires_doctor_flag)
+          vitals: Array.isArray(parsedData.vitals) ? parsedData.vitals : [],
+          requires_doctor_flag: Boolean(parsedData.requires_doctor_flag || parsedData.urgency_rating >= 4)
         }
       ])
       .select()
