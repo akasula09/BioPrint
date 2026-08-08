@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioPrint | Next-Gen Biometric Intelligence</title>
+  <style>
+    :root {
+      --bg: #05070f;
+      --card-bg: rgba(13, 17, 28, 0.75);
+      --border-color: rgba(0, 242, 254, 0.18);
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --glow-cyan: rgba(0, 242, 254, 0.25);
+      --glow-blue: rgba(79, 172, 254, 0.25);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Animated background elements */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-orb-1 {
+      position: fixed;
+      top: -10%;
+      left: 20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--glow-cyan) 0%, rgba(0, 0, 0, 0) 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-orb-2 {
+      position: fixed;
+      bottom: -10%;
+      right: 20%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--glow-blue) 0%, rgba(0, 0, 0, 0) 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Main Container */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    /* Hero Section */
+    .hero-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 3.5rem 2.5rem;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    }
+
+    .logo-container {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(79, 172, 254, 0.15));
+      border: 1px solid var(--border-color);
+      color: var(--accent-cyan);
+      box-shadow: 0 0 30px var(--glow-cyan);
+    }
+
+    .logo-badge svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.2);
+      color: var(--accent-cyan);
+      font-size: 0.825rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 30%, var(--text-muted) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.125rem;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .cta-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .btn-enter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem 2.5rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #05070f;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border: none;
+      border-radius: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 25px var(--glow-cyan);
+    }
+
+    .btn-enter:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 35px var(--glow-cyan);
+      filter: brightness(1.1);
+    }
+
+    .btn-enter:active {
+      transform: translateY(0);
+    }
+
+    .btn-enter svg {
+      width: 18px;
+      height: 18px;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-enter:hover svg {
+      transform: translateX(3px);
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
+      padding: 1.75rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--border-color);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(0, 242, 254, 0.08);
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .feature-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .feature-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #ffffff;
+    }
+
+    .feature-desc {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+  <div class="glow-orb-1"></div>
+  <div class="glow-orb-2"></div>
+
+  <div class="wrapper">
+    <!-- Hero Section -->
+    <header class="hero-card">
+      <div class="logo-container">
+        <div class="logo-badge">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457-.39-2.823-1.07-4"></path>
+          </svg>
+        </div>
+      </div>
+      
+      <span class="badge-pill">BioPrint Intelligence Platform</span>
+      <h1>Biometric Data Extraction & Processing</h1>
+      <p class="subtitle">Extract, analyze, and manage biometric identity structures seamlessly. Built for fast, precise data collection and cloud integration.</p>
+      
+      <div class="cta-group">
+        <a href="https://bioprint-eight.vercel.app" class="btn-enter">
+          Enter Portal
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <!-- Product Features -->
+    <section class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <h2 class="feature-title">Real-Time Extraction</h2>
+        <p class="feature-desc">Scan and extract complex identity profiles rapidly with low-latency parsing built straight into the browser workflow.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+          </svg>
+        </div>
+        <h2 class="feature-title">Encrypted Storage</h2>
+        <p class="feature-desc">Integrated securely with modern cloud database backends to ensure end-to-end data safety and reliability.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+        </div>
+        <h2 class="feature-title">Modular Workflows</h2>
+        <p class="feature-desc">Seamlessly structured routes to handle scanning, parsing, verification, and output formatting with ease.</p>
+      </div>
+    </section>
+
+    <footer>
+      &copy; BioPrint Portal. Optimized for modern Web applications.
+    </footer>
+  </div>
+
+</body>
+</html>
