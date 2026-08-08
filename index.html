@@ -63,7 +63,7 @@
         <!-- Navigation Header -->
         <header class="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                <!-- Brand Logo -->
+                <!-- Brand Logo (Exact Specification) -->
                 <a href="https://bioprint-eight.vercel.app/main" class="flex items-center space-x-3 group">
                     <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner group-hover:border-emerald-400 transition-colors">
                         <i class="fa-solid fa-dna text-xl group-hover:rotate-12 transition-transform"></i>
@@ -88,7 +88,7 @@
                     <a href="https://bioprint-eight.vercel.app/main" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
                         <i class="fa-solid fa-x-ray text-xs text-indigo-500"></i> DICOM Viewer
                     </a>
-                    <a href="https://bioprint-eight.vercel.app/main" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
+                    <a href="#rx-crosscheck" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
                         <i class="fa-solid fa-pills text-xs text-amber-500"></i> RxNorm Cross-Check
                     </a>
                 </nav>
@@ -198,7 +198,7 @@
         </section>
 
         <!-- Dynamic Live Data Demo Preview Section -->
-        <section class="max-w-7xl mx-auto px-6 py-16 border-b border-slate-800/80">
+        <section class="max-w-7xl mx-auto px-6 py-16 border-b border-slate-800/80" id="rx-crosscheck">
             <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
                 <div>
                     <span class="text-xs font-mono text-emerald-400 tracking-wider uppercase">Live Dashboard View</span>
@@ -210,7 +210,7 @@
                 </a>
             </div>
 
-            <!-- Fake Console UI Card -->
+            <!-- Console UI Card -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
                 <!-- Top Control Bar -->
                 <div class="bg-slate-950 px-6 py-4 border-b border-slate-800 flex flex-wrap justify-between items-center gap-4">
@@ -220,7 +220,9 @@
                     </div>
                     <div class="flex items-center space-x-3 text-xs font-mono">
                         <span class="px-3 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">FHIR R4 Synced</span>
-                        <span class="px-3 py-1 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800">RxNorm Verified</span>
+                        <span class="px-3 py-1 rounded-md bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live RxNorm API
+                        </span>
                     </div>
                 </div>
 
@@ -270,7 +272,7 @@
                         <div class="space-y-3 text-xs">
                             <div>
                                 <div class="flex justify-between text-slate-300 mb-1 font-mono">
-                                    <span>Hs-CRP (Inflammation Marker)</span>
+                                    <span>Hs-CRP (Inflammation)</span>
                                     <span class="text-amber-400 font-bold">+2.4 mg/L High</span>
                                 </div>
                                 <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -289,23 +291,35 @@
                         </div>
                     </div>
 
-                    <!-- Panel 3: RxNorm & Safety Check -->
-                    <div class="bg-slate-950/60 p-5 rounded-xl border border-slate-800/80 space-y-4">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-pills text-amber-400"></i>
-                                RxNorm Interaction Engine
-                            </h3>
-                            <span class="text-[10px] font-mono text-emerald-400">NIH API Connected</span>
-                        </div>
-                        <p class="text-xs text-slate-400">Real-time cross-referencing against prescribed medications & active biomarkers.</p>
-
-                        <div class="p-3 bg-amber-950/30 border border-amber-800/50 rounded-lg text-xs space-y-1">
-                            <div class="font-bold text-amber-300 flex items-center gap-1.5">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                Minor Contraindication Detected
+                    <!-- Panel 3: LIVE NIH RxNorm Integration UI -->
+                    <div class="bg-slate-950/60 p-5 rounded-xl border border-slate-800/80 space-y-4 flex flex-col justify-between">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-pills text-amber-400"></i>
+                                    NIH RxNorm Live Validation
+                                </h3>
+                                <span class="text-[10px] font-mono text-emerald-400">REST API</span>
                             </div>
-                            <div class="text-slate-300">Biomarker elevated ferritin levels flagged against supplement protocol.</div>
+                            <p class="text-xs text-slate-400">Query the real National Library of Medicine RxNorm database directly.</p>
+
+                            <!-- Live Search Input Form -->
+                            <form id="rx-form" class="flex gap-2">
+                                <input type="text" id="rx-input" placeholder="e.g. Lisinopril, Ibuprofen, 67balls123" 
+                                       class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono">
+                                <button type="submit" id="rx-btn" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <span>Verify</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Dynamic Output Container -->
+                        <div id="rx-output" class="p-3 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono space-y-1">
+                            <div class="text-slate-400 flex items-center gap-2">
+                                <i class="fa-solid fa-info-circle text-teal-400"></i>
+                                Enter a medication name above to perform a real-time RxNorm query.
+                            </div>
                         </div>
                     </div>
 
@@ -453,22 +467,85 @@
                 <div class="h-6 w-6 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">
                     <i class="fa-solid fa-dna"></i>
                 </div>
-                <span class="font-bold text-slate-300">BioPrint Vault v2.0</span>
-                <span>—</span>
-                <span>Clinical Diagnostic & Biomarker Intelligence Engine</span>
+                <span class="text-slate-300 font-bold">BioPrint Vault v2.0</span>
             </div>
-
-            <div class="flex items-center space-x-6 font-mono text-slate-400">
-                <a href="https://bioprint-eight.vercel.app/main" class="hover:text-emerald-400 transition-colors">CONSOLE MAIN</a>
-                <a href="https://bioprint-eight.vercel.app/main" class="hover:text-emerald-400 transition-colors">FHIR R4 API</a>
-                <a href="https://bioprint-eight.vercel.app/main" class="hover:text-emerald-400 transition-colors">RxNORM QUERY</a>
-            </div>
-
-            <div class="text-slate-600 font-mono">
-                &copy; 2026 BioPrint Vault. All rights reserved.
+            <div>
+                © 2026 BioPrint Vault — Diagnostic Intelligence Engine. All Rights Reserved.
             </div>
         </div>
     </footer>
 
+    <!-- Real RxNorm REST API Script Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const rxForm = document.getElementById('rx-form');
+            const rxInput = document.getElementById('rx-input');
+            const rxOutput = document.getElementById('rx-output');
+            const rxBtn = document.getElementById('rx-btn');
+
+            rxForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const term = rxInput.value.trim();
+                if (!term) return;
+
+                // Set Loading State
+                rxBtn.disabled = true;
+                rxOutput.className = "p-3 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono space-y-1";
+                rxOutput.innerHTML = `
+                    <div class="text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-notch animate-spin"></i>
+                        <span>Querying NIH RxNorm REST API for "${term}"...</span>
+                    </div>
+                `;
+
+                try {
+                    // Call official NIH RxNorm API
+                    const res = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(term)}`);
+                    const data = await res.json();
+                    
+                    const idGroup = data.idGroup;
+                    if (idGroup && idGroup.rxnormId && idGroup.rxnormId.length > 0) {
+                        const rxcui = idGroup.rxnormId[0];
+
+                        // Get details for valid concept
+                        const detailsRes = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/properties.json`);
+                        const detailsData = await detailsRes.json();
+                        const props = detailsData.properties || {};
+
+                        rxOutput.className = "p-3 bg-emerald-950/30 border border-emerald-800/50 rounded-lg text-xs font-mono space-y-1";
+                        rxOutput.innerHTML = `
+                            <div class="font-bold text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check"></i>
+                                VALID RXNORM DRUG CONCEPT
+                            </div>
+                            <div class="text-slate-200">Name: <span class="text-white font-bold">${props.name || term}</span></div>
+                            <div class="text-slate-400">RxCUI: <span class="text-emerald-300">${rxcui}</span> | TTY: ${props.tty || 'N/A'}</div>
+                        `;
+                    } else {
+                        // Unrecognized drug name (e.g. 67balls123)
+                        rxOutput.className = "p-3 bg-red-950/30 border border-red-800/50 rounded-lg text-xs font-mono space-y-1";
+                        rxOutput.innerHTML = `
+                            <div class="font-bold text-red-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                INVALID MEDICATION ENTRY
+                            </div>
+                            <div class="text-slate-300">"${term}" was not found in the NIH RxNorm database.</div>
+                        `;
+                    }
+                } catch (err) {
+                    rxOutput.className = "p-3 bg-red-950/30 border border-red-800/50 rounded-lg text-xs font-mono space-y-1";
+                    rxOutput.innerHTML = `
+                        <div class="font-bold text-red-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-wifi"></i>
+                            API CONNECTION ERROR
+                        </div>
+                        <div class="text-slate-300">Unable to reach NIH RxNorm services. Please try again.</div>
+                    `;
+                } finally {
+                    rxBtn.disabled = false;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
