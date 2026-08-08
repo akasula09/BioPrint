@@ -341,229 +341,236 @@
     </main>
 
     <script>
-        // Set PDF.js Worker Source
+    // Set PDF.js Worker Source safely
+    if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
-        const SUPABASE_URL = 'https://kx6ir81mnlo9oxumgbfg.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Use a unique variable name to prevent collisions with window.supabase
+    const SUPABASE_URL = 'https://kx6ir81mnlo9oxumgbfg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Kx6iR81mnl9OXUmGbfgbOA_PR9Dy2zT';
+    
+    // Initialize client cleanly without throwing redeclaration errors
+    var dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        let logs = [];
+    let logs = [];
 
-        window.addEventListener('DOMContentLoaded', () => {
-            fetchLogs();
-            
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchLogs();
+        
+        if (dbClient) {
             // Subscribe to Supabase Realtime
-            supabase
+            dbClient
                 .channel('public:diagnostic_logs')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'diagnostic_logs' }, payload => {
                     logs.unshift(payload.new);
                     renderLogs();
                 })
                 .subscribe();
-        });
-
-        async function fetchLogs() {
-            const { data, error } = await supabase
-                .from('diagnostic_logs')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (!error && data) {
-                logs = data;
-                renderLogs();
-            }
         }
+    });
 
-        function renderLogs() {
-            const container = document.getElementById('logsContainer');
-            document.getElementById('feedCount').innerText = `${logs.length} Logged`;
+    async function fetchLogs() {
+        if (!dbClient) return;
+        const { data, error } = await dbClient
+            .from('diagnostic_logs')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-            if (logs.length === 0) return;
+        if (!error && data) {
+            logs = data;
+            renderLogs();
+        }
+    }
 
-            container.innerHTML = logs.map((log, index) => {
-                const isHigh = log.urgency_rating >= 4 || log.requires_doctor_flag;
-                const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
-                const vitals = log.vitals || [];
+    function renderLogs() {
+        const container = document.getElementById('logsContainer');
+        const feedCount = document.getElementById('feedCount');
+        if (feedCount) feedCount.innerText = `${logs.length} Logged`;
 
-                return `
-                    <div class="feed-card">
-                        <div class="feed-header">
-                            <div>
-                                <strong style="font-size: 0.9rem;">${escapeHtml(log.file_name)}</strong>
-                                <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace;">
-                                    ${new Date(log.created_at).toLocaleString()}
-                                </div>
+        if (!container || logs.length === 0) return;
+
+        container.innerHTML = logs.map((log, index) => {
+            const isHigh = log.urgency_rating >= 4 || log.requires_doctor_flag;
+            const jargon = log.jargon_map ? Object.entries(log.jargon_map) : [];
+            const vitals = log.vitals || [];
+
+            return `
+                <div class="feed-card">
+                    <div class="feed-header">
+                        <div>
+                            <strong style="font-size: 0.9rem;">${escapeHtml(log.file_name)}</strong>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace;">
+                                ${new Date(log.created_at).toLocaleString()}
                             </div>
-                            <span class="severity-badge ${isHigh ? 'severity-high' : 'severity-low'}">
-                                Urgency ${log.urgency_rating}/5
-                            </span>
                         </div>
-
-                        ${log.requires_doctor_flag ? `
-                            <div class="doctor-flag">
-                                <div>⚠️ <strong>Doctor Review Required:</strong> High risk anomalies detected.</div>
-                                <button class="action-btn" onclick="exportEmergencyReport(${index})">📄 Export Medical Summary</button>
-                            </div>
-                        ` : ''}
-
-                        ${log.summary ? `
-                            <div style="background: #030712; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
-                                <p style="font-size: 0.8rem;">${escapeHtml(log.summary)}</p>
-                                <button class="action-btn" style="margin-top: 0.5rem;" onclick="speakText('${escapeHtml(log.summary)}')">
-                                    🔊 Read Summary Out Loud
-                                </button>
-                            </div>
-                        ` : ''}
-
-                        ${vitals.length > 0 ? `
-                            <div class="vitals-grid">
-                                ${vitals.map(v => `
-                                    <div class="vital-cell">
-                                        <div style="font-size: 0.65rem; color: var(--text-muted);">${escapeHtml(v.metric)}</div>
-                                        <div style="font-size: 0.8rem; font-weight: bold; font-family: monospace; color: ${v.isAnomaly ? 'var(--accent-cyan)' : 'inherit'}">
-                                            ${v.value} <span style="font-size: 0.6rem; font-weight: normal;">${escapeHtml(v.unit)}</span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-
-                        ${jargon.length > 0 ? `
-                            <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
-                                <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Plain-English Translation Dictionary</div>
-                                ${jargon.map(([term, def]) => `
-                                    <div class="jargon-item">
-                                        <strong style="color: var(--accent-cyan);">${escapeHtml(term)}:</strong> ${escapeHtml(def)}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
+                        <span class="severity-badge ${isHigh ? 'severity-high' : 'severity-low'}">
+                            Urgency ${log.urgency_rating}/5
+                        </span>
                     </div>
-                `;
-            }).join('');
-        }
 
-        // Handle Image OR PDF Processing
-        async function handleFile(file) {
-            if (!file) return;
+                    ${log.requires_doctor_flag ? `
+                        <div class="doctor-flag">
+                            <div>⚠️ <strong>Doctor Review Required:</strong> High risk anomalies detected.</div>
+                            <button class="action-btn" onclick="exportEmergencyReport(${index})">📄 Export Medical Summary</button>
+                        </div>
+                    ` : ''}
 
-            const loader = document.getElementById('loader');
-            const bar = document.getElementById('loaderBar');
-            const percent = document.getElementById('loaderPercent');
-            const status = document.getElementById('loaderStatus');
+                    ${log.summary ? `
+                        <div style="background: #030712; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                            <p style="font-size: 0.8rem;">${escapeHtml(log.summary)}</p>
+                            <button class="action-btn" style="margin-top: 0.5rem;" onclick="speakText('${escapeHtml(log.summary)}')">
+                                🔊 Read Summary Out Loud
+                            </button>
+                        </div>
+                    ` : ''}
 
-            loader.classList.remove('hidden');
-            bar.style.width = '15%';
-            percent.innerText = '15%';
+                    ${vitals.length > 0 ? `
+                        <div class="vitals-grid">
+                            ${vitals.map(v => `
+                                <div class="vital-cell">
+                                    <div style="font-size: 0.65rem; color: var(--text-muted);">${escapeHtml(v.metric)}</div>
+                                    <div style="font-size: 0.8rem; font-weight: bold; font-family: monospace; color: ${v.isAnomaly ? 'var(--accent-cyan)' : 'inherit'}">
+                                        ${v.value} <span style="font-size: 0.6rem; font-weight: normal;">${escapeHtml(v.unit)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
 
-            try {
-                let base64Image = '';
+                    ${jargon.length > 0 ? `
+                        <div style="margin-top: 0.75rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+                            <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Plain-English Translation Dictionary</div>
+                            ${jargon.map(([term, def]) => `
+                                <div class="jargon-item">
+                                    <strong style="color: var(--accent-cyan);">${escapeHtml(term)}:</strong> ${escapeHtml(def)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
 
-                if (file.type === 'application/pdf') {
-                    status.innerText = 'Rasterizing PDF page to PNG via PDF.js...';
-                    base64Image = await convertPdfToImage(file);
-                } else {
-                    status.innerText = 'Reading image payload...';
-                    base64Image = await readFileAsBase64(file);
-                }
+    // Global file handler function registered at window level
+    async function handleFile(file) {
+        if (!file) return;
 
-                bar.style.width = '50%';
-                percent.innerText = '50%';
-                status.innerText = 'Executing serverless vision model parsing...';
+        const loader = document.getElementById('loader');
+        const bar = document.getElementById('loaderBar');
+        const percent = document.getElementById('loaderPercent');
+        const status = document.getElementById('loaderStatus');
 
-                const res = await fetch('/api/groq', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ base64Image, fileName: file.name })
-                });
+        if (loader) loader.classList.remove('hidden');
+        if (bar) bar.style.width = '15%';
+        if (percent) percent.innerText = '15%';
 
-                const result = await res.json();
-                if (!res.ok) throw new Error(result.error || 'Server processing failed');
+        try {
+            let base64Image = '';
 
-                bar.style.width = '100%';
-                percent.innerText = '100%';
-                status.innerText = 'Analysis Complete!';
-
-                setTimeout(() => loader.classList.add('hidden'), 1000);
-
-            } catch (err) {
-                alert('Error processing document: ' + err.message);
-                loader.classList.add('hidden');
-            }
-        }
-
-        // PDF.js rasterizer: Reads Page 1 of PDF and draws to image data URL
-        async function convertPdfToImage(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const page = await pdf.getPage(1); // Render page 1
-
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.getElementById('pdfRenderCanvas');
-            const context = canvas.getContext('2d');
-
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            return canvas.toDataURL('image/png');
-        }
-
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // Feature 1: Speech Synthesis API for Accessibility
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 0.9;
-                window.speechSynthesis.speak(utterance);
+            if (file.type === 'application/pdf') {
+                if (status) status.innerText = 'Rasterizing PDF page to PNG via PDF.js...';
+                base64Image = await convertPdfToImage(file);
             } else {
-                alert('Speech synthesis is not supported in this browser.');
+                if (status) status.innerText = 'Reading image payload...';
+                base64Image = await readFileAsBase64(file);
             }
-        }
 
-        // Feature 2: Clinical Summary Printable Export
-        function exportEmergencyReport(index) {
-            const log = logs[index];
-            const reportWindow = window.open('', '_blank');
-            reportWindow.document.write(`
-                <html>
-                <head>
-                    <title>Clinical Emergency Summary - ${log.file_name}</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-                        h1 { color: #d97706; }
-                        .box { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-                    </style>
-                </head>
-                <body>
-                    <h1>BioPrint Vault — Emergency Diagnostic Brief</h1>
-                    <p><strong>Document Name:</strong> ${log.file_name}</p>
-                    <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
-                    <p><strong>Urgency Score:</strong> ${log.urgency_rating} / 5</p>
-                    <div class="box">
-                        <h3>Automated Diagnostic Summary:</h3>
-                        <p>${log.summary}</p>
-                    </div>
-                    <button onclick="window.print()">Print / Save as PDF</button>
-                </body>
-                </html>
-            `);
-        }
+            if (bar) bar.style.width = '50%';
+            if (percent) percent.innerText = '50%';
+            if (status) status.innerText = 'Executing serverless vision model parsing...';
 
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            const res = await fetch('/api/groq', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ base64Image, fileName: file.name })
+            });
+
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Server processing failed');
+
+            if (bar) bar.style.width = '100%';
+            if (percent) percent.innerText = '100%';
+            if (status) status.innerText = 'Analysis Complete!';
+
+            setTimeout(() => { if (loader) loader.classList.add('hidden'); }, 1000);
+
+        } catch (err) {
+            alert('Error processing document: ' + err.message);
+            if (loader) loader.classList.add('hidden');
         }
-    </script>
+    }
+
+    async function convertPdfToImage(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1);
+
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.getElementById('pdfRenderCanvas') || document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        return canvas.toDataURL('image/png');
+    }
+
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('Speech synthesis is not supported in this browser.');
+        }
+    }
+
+    function exportEmergencyReport(index) {
+        const log = logs[index];
+        if (!log) return;
+        const reportWindow = window.open('', '_blank');
+        reportWindow.document.write(`
+            <html>
+            <head>
+                <title>Clinical Emergency Summary - ${escapeHtml(log.file_name)}</title>
+                <style>
+                    body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+                    h1 { color: #d97706; }
+                    .box { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+                </style>
+            </head>
+            <body>
+                <h1>BioPrint Vault — Emergency Diagnostic Brief</h1>
+                <p><strong>Document Name:</strong> ${escapeHtml(log.file_name)}</p>
+                <p><strong>Timestamp:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+                <p><strong>Urgency Score:</strong> ${log.urgency_rating} / 5</p>
+                <div class="box">
+                    <h3>Automated Diagnostic Summary:</h3>
+                    <p>${escapeHtml(log.summary)}</p>
+                </div>
+                <button onclick="window.print()">Print / Save as PDF</button>
+            </body>
+            </html>
+        `);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+</script>
 </body>
 </html>
