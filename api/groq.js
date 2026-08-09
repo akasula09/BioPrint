@@ -132,7 +132,7 @@ Statuses must be one of: "normal", "monitor", "attention". Do NOT include intern
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b',
+        model: 'qwen/qwen3.6-27b',
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -149,7 +149,8 @@ Statuses must be one of: "normal", "monitor", "attention". Do NOT include intern
         ],
         temperature: 0.1,
         max_tokens: 8192,
-        reasoning_format: 'hidden'
+        reasoning_format: 'hidden',
+        reasoning_effort: 'none'
       })
     });
 
