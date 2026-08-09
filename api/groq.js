@@ -13,10 +13,10 @@ function cleanAndParseJSON(rawText) {
 
   let cleaned = rawText.trim();
 
-  // 1. Strip complete <think>...</think> blocks
+  // 1. Strip complete <think>...</think> reasoning blocks
   cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-  // 2. Fallback for unclosed <think> tag
+  // 2. Fallback for unclosed <think> tags
   if (cleaned.includes('<think>')) {
     const firstBrace = cleaned.indexOf('{');
     if (firstBrace !== -1) {
@@ -26,7 +26,7 @@ function cleanAndParseJSON(rawText) {
     }
   }
 
-  // 3. Strip markdown code fences
+  // 3. Strip markdown code fences (e.g. ```json ... ```)
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
   // 4. Locate absolute JSON bounds {...}
@@ -39,13 +39,16 @@ function cleanAndParseJSON(rawText) {
     throw new Error(`No valid JSON object bounds found in model output. Raw content received: "${rawText.slice(0, 150)}..."`);
   }
 
-  // 5. Clean trailing commas
+  // 5. Clean trailing commas inside arrays or objects
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
+
+  // 6. Sanitize invalid control characters that break JSON.parse
+  cleaned = cleaned.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 
   try {
     return JSON.parse(cleaned);
   } catch (err) {
-    throw new Error(`Failed to parse AI JSON response: ${err.message}. Substring attempted: "${cleaned.slice(0, 150)}..."`);
+    throw new Error(`Failed to parse AI JSON response: ${err.message}. Substring attempted: "${cleaned.slice(0, 200)}..."`);
   }
 }
 
@@ -81,7 +84,7 @@ module.exports = async function handler(req, res) {
 
     const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics, translate complex terms into plain English, and evaluate anatomical impact across organs, vascular systems, and nervous system tracks.
 
-Return ONLY a raw, unformatted valid JSON object matching this structure:
+Return ONLY a valid, properly escaped JSON object matching this structure:
 {
   "summary": "1-2 sentence plain English summary of findings",
   "urgency_rating": 3,
@@ -120,7 +123,7 @@ Valid anatomical IDs include:
 - Organs: "brain", "heart", "lungs", "liver", "kidneys", "stomach", "spleen"
 - Blood Vessels: "aorta", "carotid_arteries", "femoral_arteries", "renal_vasculature", "pulmonary_vessels"
 - Nervous System: "spinal_cord", "vagus_nerve", "optic_nerve", "peripheral_nerves"
-Statuses must be one of: "normal", "monitor", "attention".`;
+Statuses must be one of: "normal", "monitor", "attention". Do NOT include internal double-quotes inside string values without escaping them.`;
 
     const groqResponse = await fetch(GROQ_ENDPOINT, {
       method: 'POST',
@@ -130,10 +133,11 @@ Statuses must be one of: "normal", "monitor", "attention".`;
       },
       body: JSON.stringify({
         model: 'qwen/qwen3.6-27b',
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
-            content: 'You are an automated medical extraction engine. Begin immediately with the JSON payload.'
+            content: 'You are an automated medical extraction engine. Output valid JSON only.'
           },
           {
             role: 'user',
@@ -144,7 +148,7 @@ Statuses must be one of: "normal", "monitor", "attention".`;
           }
         ],
         temperature: 0.1,
-        max_tokens: 4096,
+        max_tokens: 8192,
         reasoning_format: 'hidden'
       })
     });
