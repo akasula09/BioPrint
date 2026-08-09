@@ -200,7 +200,7 @@
         <div class="max-w-md">
           <label for="med-search" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Query NIH RxNorm Database</label>
           <div class="flex gap-2">
-            <input type="text" id="med-search" placeholder="Enter drug name (e.g. Benonatate, Metformin, Ibuprofen)..." class="flex-1 bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono" />
+            <input type="text" id="med-search" placeholder="Enter drug name (e.g. Benzonatate, Metformin, Ibuprofen)..." class="flex-1 bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono" />
             <button onclick="checkMedication()" id="med-check-btn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-500 transition flex items-center gap-1.5 shrink-0">
               <i class="fa-solid fa-magnifying-glass"></i>
               <span>Verify</span>
@@ -357,58 +357,57 @@
 
     function compileAnatomicalData(aiStructures, vitals, urgency = 1) {
       const defaultMap = {
-        brain: { name: "Brain", type: "organ", info: "Neurological function within healthy range.", status: "normal", baseColor: 0xe2b29f },
-        lungs: { name: "Lungs", type: "organ", info: "Pulmonary respiratory volume normal.", status: "normal", baseColor: 0xf4a261 },
-        heart: { name: "Heart", type: "organ", info: "Cardiovascular rhythm and cardiac output normal.", status: "normal", baseColor: 0xbd3a42 },
-        liver: { name: "Liver", type: "organ", info: "Hepatic enzyme profile balanced.", status: "normal", baseColor: 0x8b3a2b },
-        kidneys: { name: "Kidneys", type: "organ", info: "Renal glomerular filtration rate normal.", status: "normal", baseColor: 0x7a2c35 },
-        aorta: { name: "Aorta & Vascular Tree", type: "vessel", info: "Systemic arterial perfusion clear.", status: "normal", baseColor: 0xd62828 },
-        carotid_arteries: { name: "Carotid Arteries", type: "vessel", info: "Cerebrovascular circulation unobstructed.", status: "normal", baseColor: 0xe63946 },
-        spinal_cord: { name: "Spinal Cord & Neural Axis", type: "nerve", info: "Central neural impulse propagation stable.", status: "normal", baseColor: 0x38bdf8 }
+        brain: { name: "Brain", type: "organ", status: "normal", baseColor: 0xe2b29f },
+        lungs: { name: "Lungs", type: "organ", status: "normal", baseColor: 0xf4a261 },
+        heart: { name: "Heart", type: "organ", status: "normal", baseColor: 0xbd3a42 },
+        liver: { name: "Liver", type: "organ", status: "normal", baseColor: 0x8b3a2b },
+        kidneys: { name: "Kidneys", type: "organ", status: "normal", baseColor: 0x7a2c35 },
+        aorta: { name: "Aorta & Vascular Tree", type: "vessel", status: "normal", baseColor: 0xd62828 },
+        carotid_arteries: { name: "Carotid Arteries", type: "vessel", status: "normal", baseColor: 0xe63946 },
+        spinal_cord: { name: "Spinal Cord & Neural Axis", type: "nerve", status: "normal", baseColor: 0x38bdf8 }
       };
 
       aiStructures.forEach(item => {
         if (defaultMap[item.id]) {
-          const status = item.status || "normal";
-          defaultMap[item.id].status = status;
-
-          // Generate accurate text status depending on the organ status
-          if (item.info) {
-            defaultMap[item.id].info = item.info;
-          } else {
-            if (status === 'attention') {
-              defaultMap[item.id].info = `Attention Required: Significant diagnostic anomalies flagged for ${defaultMap[item.id].name.toLowerCase()}.`;
-            } else if (status === 'monitor') {
-              defaultMap[item.id].info = `Monitor Level: Moderate variance observed; continued monitoring advised.`;
-            } else {
-              defaultMap[item.id].info = `${defaultMap[item.id].name} parameters operating within baseline values.`;
-            }
-          }
+          defaultMap[item.id].status = item.status || "normal";
+          if (item.info) defaultMap[item.id].customInfo = item.info;
         }
       });
 
       if (aiStructures.length === 0) {
         if (vitals.some(v => v.isAnomaly && /alt|ast|liver|bilirubin/i.test(v.metric))) {
           defaultMap.liver.status = "attention";
-          defaultMap.liver.info = "Attention Required: Elevated liver enzymes detected in diagnostic blood work.";
         }
         if (vitals.some(v => v.isAnomaly && /egfr|creatinine|kidney|bun/i.test(v.metric))) {
           defaultMap.kidneys.status = "attention";
-          defaultMap.kidneys.info = "Attention Required: Abnormal renal filtration indicators detected.";
         }
-        if (vitals.some(v => v.isAnomaly && /heart|bp|pulse|troponin|cholesterol|cd8/i.test(v.metric))) {
+        if (vitals.some(v => v.isAnomaly && /heart|bp|pulse|troponin|cholesterol|cd8|wbc/i.test(v.metric))) {
           defaultMap.heart.status = "attention";
           defaultMap.aorta.status = "monitor";
-          defaultMap.heart.info = "Attention Required: Elevated immune or cardiovascular markers indicating strain.";
-          defaultMap.aorta.info = "Monitor Level: Mild secondary arterial inflammatory stress detected.";
         }
       }
 
-      return Object.keys(defaultMap).map(key => ({
-        key: key,
-        ...defaultMap[key],
-        color: getAnatomicalColor(defaultMap[key].status, defaultMap[key].baseColor)
-      }));
+      return Object.keys(defaultMap).map(key => {
+        const item = defaultMap[key];
+        let statusText = "";
+
+        if (item.status === "attention") {
+          statusText = item.customInfo || `CRITICAL: Significant diagnostic anomaly flagged for ${item.name.toLowerCase()}. Requires clinical evaluation.`;
+        } else if (item.status === "monitor") {
+          statusText = item.customInfo || `MONITOR: Moderate variance observed in ${item.name.toLowerCase()} metrics; ongoing tracking recommended.`;
+        } else {
+          statusText = `NORMAL: ${item.name} metrics operating within standard reference parameters.`;
+        }
+
+        return {
+          key: key,
+          name: item.name,
+          type: item.type,
+          status: item.status,
+          info: statusText,
+          color: getAnatomicalColor(item.status, item.baseColor)
+        };
+      });
     }
 
     function mapJargonToMedications(jargonMap) {
@@ -476,7 +475,6 @@
 
     async function fetchRxNormDrugInfo(rxcui, drugName) {
       try {
-        // Query NIH RxClass API for drug class and therapeutic indication
         const classRes = await fetch(`https://rxnav.nlm.nih.gov/REST/rxclass/class/byRxcui.json?rxcui=${rxcui}&relaSource=ATC`);
         const classData = await classRes.json();
         
@@ -487,7 +485,6 @@
           infoText = `Therapeutic Class: ${mainClass}.`;
         }
 
-        // Supplementary fallback check for common indications if RxClass is generic
         const lower = drugName.toLowerCase();
         if (lower.includes("benzonatate") || lower.includes("dextromethorphan") || lower.includes("codeine") || lower.includes("cough")) {
           infoText += " Indication: Used as an antitussive (cough suppressant) to relieve coughing.";
@@ -611,103 +608,94 @@
       showView('view-upload');
     }
 
-    // REALISTIC ANATOMICAL ORGAN MESH BUILDERS
+    // ORGANIC REALISTIC ANATOMICAL ORGAN MESH BUILDERS
     function buildBrainMeshGroup() {
       const group = new THREE.Group();
       
-      // Cerebrum with dual hemispheres and surface sulci folding
-      const brainGeo = new THREE.SphereGeometry(0.32, 32, 24);
-      const pos = brainGeo.attributes.position;
+      const geo = new THREE.SphereGeometry(0.35, 48, 48);
+      const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
-        let x = pos.getX(i);
-        let y = pos.getY(i);
-        let z = pos.getZ(i);
-        // Sulci & gyri surface displacement simulation
-        let bump = Math.sin(x * 18) * Math.cos(y * 18) * Math.sin(z * 18) * 0.025;
-        pos.setXYZ(i, x + bump, y + bump, z + bump);
+        let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        let wave = Math.sin(x * 15) * Math.cos(y * 15) * Math.sin(z * 15) * 0.03;
+        pos.setXYZ(i, x + wave, y + wave, z + wave);
       }
-      brainGeo.computeVertexNormals();
+      geo.computeVertexNormals();
 
-      const leftHemisphere = brainGeo.clone();
-      leftHemisphere.scale(0.85, 0.75, 1.05);
-      leftHemisphere.translate(-0.13, 0, 0);
+      const leftHemi = new THREE.Mesh(geo);
+      leftHemi.scale.set(0.8, 0.7, 1.1);
+      leftHemi.position.set(-0.14, 0, 0);
 
-      const rightHemisphere = brainGeo.clone();
-      rightHemisphere.scale(0.85, 0.75, 1.05);
-      rightHemisphere.translate(0.13, 0, 0);
+      const rightHemi = new THREE.Mesh(geo.clone());
+      rightHemi.scale.set(0.8, 0.7, 1.1);
+      rightHemi.position.set(0.14, 0, 0);
 
-      // Cerebellum posterior base
-      const cerebGeo = new THREE.SphereGeometry(0.14, 20, 16);
-      cerebGeo.scale(1.2, 0.7, 0.9);
-      cerebGeo.translate(0, -0.2, -0.15);
+      const cerebGeo = new THREE.SphereGeometry(0.16, 32, 32);
+      cerebGeo.scale(1.2, 0.65, 0.85);
+      const cerebellum = new THREE.Mesh(cerebGeo);
+      cerebellum.position.set(0, -0.22, -0.15);
 
-      // Brainstem extension
-      const stemGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.25, 16);
-      stemGeo.translate(0, -0.32, -0.05);
+      const stemGeo = new THREE.CylinderGeometry(0.05, 0.03, 0.3, 24);
+      const stem = new THREE.Mesh(stemGeo);
+      stem.position.set(0, -0.35, -0.05);
 
-      group.add(new THREE.Mesh(leftHemisphere));
-      group.add(new THREE.Mesh(rightHemisphere));
-      group.add(new THREE.Mesh(cerebGeo));
-      group.add(new THREE.Mesh(stemGeo));
-
+      group.add(leftHemi, rightHemi, cerebellum, stem);
       return group;
     }
 
     function buildHeartMeshGroup() {
-      const heartGroup = new THREE.Group();
-
-      // Ventricular cone sculpting
-      const geo = new THREE.SphereGeometry(0.24, 32, 32);
+      const group = new THREE.Group();
+      
+      const geo = new THREE.SphereGeometry(0.26, 40, 40);
       const pos = geo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
-        let y = pos.getY(i);
-        let x = pos.getX(i);
-        let z = pos.getZ(i);
+        let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
         if (y < 0) {
-          x *= (1 + y * 0.85);
-          z *= (1 + y * 0.85);
+          x *= (1 + y * 0.75);
+          z *= (1 + y * 0.75);
         }
-        pos.setXYZ(i, x, y, z);
+        pos.setXYZ(i, x * 1.1, y * 1.2, z * 0.9);
       }
       geo.computeVertexNormals();
-      const ventricles = new THREE.Mesh(geo);
+      const heartBody = new THREE.Mesh(geo);
+      heartBody.rotation.z = -0.15;
 
-      // Aortic arch exiting heart apex
       const archPath = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 0.15, 0),
-        new THREE.Vector3(0, 0.32, -0.02),
-        new THREE.Vector3(0.08, 0.35, -0.05),
-        new THREE.Vector3(0.12, 0.22, -0.08)
+        new THREE.Vector3(0, 0.1, 0),
+        new THREE.Vector3(-0.02, 0.32, -0.02),
+        new THREE.Vector3(0.1, 0.36, -0.05),
+        new THREE.Vector3(0.14, 0.2, -0.08)
       ]);
-      const archMesh = new THREE.Mesh(new THREE.TubeGeometry(archPath, 20, 0.04, 12, false));
+      const archMesh = new THREE.Mesh(new THREE.TubeGeometry(archPath, 24, 0.045, 16, false));
 
-      heartGroup.add(ventricles);
-      heartGroup.add(archMesh);
-      return heartGroup;
+      group.add(heartBody, archMesh);
+      return group;
     }
 
     function buildLungMeshPair() {
-      const lungGroup = new THREE.Group();
+      const group = new THREE.Group();
 
-      // Right lung (3 distinct lobed structures)
-      const rLung = new THREE.ConeGeometry(0.22, 0.65, 24);
-      rLung.scale(1.1, 1, 0.75);
-      rLung.rotateZ(-0.1);
+      const createLung = (isRight) => {
+        const geo = new THREE.ConeGeometry(0.24, 0.7, 32, 32);
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+          let indent = (isRight ? x < 0 : x > 0) && y < 0 ? 0.7 : 1.0;
+          pos.setXYZ(i, x * indent * 1.1, y, z * 0.8);
+        }
+        geo.computeVertexNormals();
+        return new THREE.Mesh(geo);
+      };
 
-      // Left lung (2 lobes with cardiac notch recess)
-      const lLung = new THREE.ConeGeometry(0.2, 0.62, 24);
-      lLung.scale(1.0, 1, 0.7);
-      lLung.rotateZ(0.12);
+      const rightLung = createLung(true);
+      rightLung.position.set(0.25, 0, 0);
+      rightLung.rotation.z = -0.08;
 
-      const rMesh = new THREE.Mesh(rLung);
-      rMesh.position.set(0.24, 0, 0);
+      const leftLung = createLung(false);
+      leftLung.position.set(-0.25, 0, 0);
+      leftLung.rotation.z = 0.1;
 
-      const lMesh = new THREE.Mesh(lLung);
-      lMesh.position.set(-0.24, 0, 0);
-
-      lungGroup.add(rMesh);
-      lungGroup.add(lMesh);
-      return lungGroup;
+      group.add(rightLung, leftLung);
+      return group;
     }
 
     function buildLiverMesh() {
@@ -723,7 +711,6 @@
       const kidneyGeo = new THREE.SphereGeometry(0.15, 24, 24);
       kidneyGeo.scale(0.55, 1.25, 0.75);
 
-      // Indent medial renal hilum
       const pos = kidneyGeo.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         let x = pos.getX(i);
@@ -776,7 +763,6 @@
 
       bodyGroup = new THREE.Group();
 
-      // Translucent Realistic Glass Fresnel Shader Skin Material
       const fresnelShader = {
         uniforms: {
           color: { value: new THREE.Color(0x38bdf8) },
@@ -811,7 +797,6 @@
 
       const skinMaterial = new THREE.ShaderMaterial(fresnelShader);
 
-      // Anatomically Continuous Sculpted Human Outer Mesh
       const headGeom = new THREE.SphereGeometry(0.52, 32, 32);
       headGeom.scale(1, 1.25, 1.05);
       const headMesh = new THREE.Mesh(headGeom, skinMaterial);
@@ -843,7 +828,6 @@
       bodyGroup.add(leftLeg);
       bodyGroup.add(rightLeg);
 
-      // Blood Vessels (Aorta & Vascular Tree)
       const vesselMaterial = new THREE.MeshStandardMaterial({
         color: 0xd62828,
         roughness: 0.3,
@@ -869,7 +853,6 @@
       const carotidMesh = new THREE.Mesh(new THREE.TubeGeometry(carotidPath, 20, 0.025, 8, false), vesselMaterial);
       bodyGroup.add(carotidMesh);
 
-      // Neural Axis Wire
       const nerveMaterial = new THREE.MeshStandardMaterial({
         color: 0x38bdf8,
         roughness: 0.2,
@@ -886,7 +869,6 @@
       const spinalMesh = new THREE.Mesh(new THREE.TubeGeometry(spinalPath, 32, 0.03, 8, false), nerveMaterial);
       bodyGroup.add(spinalMesh);
 
-      // Build Organic Realistic Organs
       const currentStructures = healthData.structures.length > 0 ? healthData.structures : compileAnatomicalData([], []);
 
       currentStructures.forEach(data => {
@@ -936,7 +918,6 @@
 
       scene.add(bodyGroup);
 
-      // SMOOTH QUATERNION ARCBALL NAVIGATION
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
 
@@ -961,14 +942,12 @@
         previousMousePosition = { x: e.clientX, y: e.clientY };
       });
 
-      // Mouse Wheel Zooming
       container.addEventListener('wheel', (e) => {
         e.preventDefault();
         targetZoom += e.deltaY * 0.005;
         targetZoom = Math.max(3.5, Math.min(12.0, targetZoom));
       }, { passive: false });
 
-      // Touch Controls
       container.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
           isDragging = true;
@@ -1022,11 +1001,9 @@
       requestAnimationFrame(animate);
 
       if (bodyGroup) {
-        // Smooth dampening interpolation (Slerp) for rotations
         currentQuaternion.slerp(targetQuaternion, 0.1);
         bodyGroup.quaternion.copy(currentQuaternion);
 
-        // Auto slow idle rotation when not dragging
         targetQuaternion.multiplyQuaternions(
           new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.002),
           targetQuaternion
@@ -1034,7 +1011,6 @@
       }
 
       if (camera) {
-        // Smooth camera zoom dampening
         currentZoom += (targetZoom - currentZoom) * 0.1;
         camera.position.z = currentZoom;
       }
