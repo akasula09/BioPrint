@@ -82,48 +82,20 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GROQ_API_KEY is not configured in Vercel environment variables.' });
     }
 
-    const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics, translate complex terms into plain English, and evaluate anatomical impact across organs, vascular systems, and nervous system tracks.
+    const promptText = `Analyze this medical report image. Extract key metrics, translate jargon to plain English, and evaluate organ/vascular impacts.
 
-Return ONLY a valid, properly escaped JSON object matching this structure:
+Return ONLY a valid JSON object matching this structure:
 {
-  "summary": "1-2 sentence plain English summary of findings",
+  "summary": "1-2 sentence plain English summary",
   "urgency_rating": 3,
-  "jargon_map": {
-    "Leukocytosis": "High white blood cell count"
-  },
-  "vitals": [
-    {
-      "metric": "WBC",
-      "value": 14.2,
-      "unit": "10^3/uL",
-      "isAnomaly": true
-    }
-  ],
-  "affected_structures": [
-    {
-      "id": "heart",
-      "status": "attention",
-      "info": "Elevated troponin or blood pressure indicating cardiac muscle stress."
-    },
-    {
-      "id": "carotid_arteries",
-      "status": "monitor",
-      "info": "Potential vascular inflammation secondary to lipid elevations."
-    },
-    {
-      "id": "vagus_nerve",
-      "status": "normal",
-      "info": "No parasympathetic signal impairment observed."
-    }
-  ],
+  "jargon_map": { "Term": "Definition" },
+  "vitals": [{ "metric": "WBC", "value": 14.2, "unit": "10^3/uL", "isAnomaly": true }],
+  "affected_structures": [{ "id": "heart", "status": "attention", "info": "Description" }],
   "requires_doctor_flag": true
 }
 
-Valid anatomical IDs include:
-- Organs: "brain", "heart", "lungs", "liver", "kidneys", "stomach", "spleen"
-- Blood Vessels: "aorta", "carotid_arteries", "femoral_arteries", "renal_vasculature", "pulmonary_vessels"
-- Nervous System: "spinal_cord", "vagus_nerve", "optic_nerve", "peripheral_nerves"
-Statuses must be one of: "normal", "monitor", "attention". Do NOT include internal double-quotes inside string values without escaping them.`;
+Valid anatomical IDs: "brain", "heart", "lungs", "liver", "kidneys", "stomach", "spleen", "aorta", "carotid_arteries", "spinal_cord", "vagus_nerve".
+Statuses: "normal", "monitor", "attention". Do not use unescaped double-quotes.`;
 
     const groqResponse = await fetch(GROQ_ENDPOINT, {
       method: 'POST',
@@ -148,7 +120,7 @@ Statuses must be one of: "normal", "monitor", "attention". Do NOT include intern
           }
         ],
         temperature: 0.1,
-        max_tokens: 8192,
+        max_tokens: 1024, // Keeps pre-allocated token reservation small
         reasoning_format: 'hidden',
         reasoning_effort: 'none'
       })
