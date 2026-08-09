@@ -13,22 +13,20 @@ function cleanAndParseJSON(rawText) {
 
   let cleaned = rawText.trim();
 
-  // 1. First attempt: Strip complete <think>...</think> blocks
+  // 1. Strip complete <think>...</think> blocks
   cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-  // 2. Fallback for unclosed <think> tag (when model hits max_tokens inside thinking phase):
-  // If no closing tag exists, strip from <think> to the first '{' if a brace is found later
+  // 2. Fallback for unclosed <think> tag
   if (cleaned.includes('<think>')) {
     const firstBrace = cleaned.indexOf('{');
     if (firstBrace !== -1) {
       cleaned = cleaned.slice(firstBrace);
     } else {
-      // If there are no braces at all, strip the entire unclosed think block
       cleaned = cleaned.replace(/<think>[\s\S]*/gi, '').trim();
     }
   }
 
-  // 3. Strip markdown code fences (```json ... ```)
+  // 3. Strip markdown code fences
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 
   // 4. Locate absolute JSON bounds {...}
@@ -41,7 +39,7 @@ function cleanAndParseJSON(rawText) {
     throw new Error(`No valid JSON object bounds found in model output. Raw content received: "${rawText.slice(0, 150)}..."`);
   }
 
-  // 5. Clean trailing commas before closing braces/brackets
+  // 5. Clean trailing commas
   cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
 
   try {
@@ -81,7 +79,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GROQ_API_KEY is not configured in Vercel environment variables.' });
     }
 
-    const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics and translate complex terms into plain English.
+    const promptText = `Analyze this medical diagnostic report or lab sheet. Extract key metrics, translate complex terms into plain English, and evaluate anatomical impact across organs, vascular systems, and nervous system tracks.
 
 Return ONLY a raw, unformatted valid JSON object matching this structure:
 {
@@ -98,8 +96,31 @@ Return ONLY a raw, unformatted valid JSON object matching this structure:
       "isAnomaly": true
     }
   ],
+  "affected_structures": [
+    {
+      "id": "heart",
+      "status": "attention",
+      "info": "Elevated troponin or blood pressure indicating cardiac muscle stress."
+    },
+    {
+      "id": "carotid_arteries",
+      "status": "monitor",
+      "info": "Potential vascular inflammation secondary to lipid elevations."
+    },
+    {
+      "id": "vagus_nerve",
+      "status": "normal",
+      "info": "No parasympathetic signal impairment observed."
+    }
+  ],
   "requires_doctor_flag": true
-}`;
+}
+
+Valid anatomical IDs include:
+- Organs: "brain", "heart", "lungs", "liver", "kidneys", "stomach", "spleen"
+- Blood Vessels: "aorta", "carotid_arteries", "femoral_arteries", "renal_vasculature", "pulmonary_vessels"
+- Nervous System: "spinal_cord", "vagus_nerve", "optic_nerve", "peripheral_nerves"
+Statuses must be one of: "normal", "monitor", "attention".`;
 
     const groqResponse = await fetch(GROQ_ENDPOINT, {
       method: 'POST',
@@ -158,7 +179,7 @@ Return ONLY a raw, unformatted valid JSON object matching this structure:
       return res.status(500).json({ error: `Supabase Error: ${dbError.message}` });
     }
 
-    return res.status(200).json({ success: true, data: record });
+    return res.status(200).json({ success: true, data: { ...record, affected_structures: parsedData.affected_structures || [] } });
 
   } catch (error) {
     console.error('Processing error:', error);
