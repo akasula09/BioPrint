@@ -132,7 +132,7 @@ Statuses must be one of: "normal", "monitor", "attention". Do NOT include intern
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-27b',
+        model: 'openai/gpt-oss-20b',
         response_format: { type: 'json_object' },
         messages: [
           {
