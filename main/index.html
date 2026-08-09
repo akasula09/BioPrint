@@ -5,16 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BioPrint - AI Health & Organ Mapping</title>
   
-  <!-- Tailwind CSS Cdn.. I know its bad practice lol .. BUT IM LAZY MWAAHHAHAHHHHAHHAHAHA -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js for 3D Visualizations (:O) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Font Awesome Icons(awesome) -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- PDF.js for PDF Page Rendering to Canvas Image (cool)-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
-  
   <style>
     body { background-color: #0b0f17; color: #f1f5f9; }
     .view-section { display: none; }
@@ -24,7 +19,7 @@
 </head>
 <body class="min-h-screen flex flex-col font-sans">
 
-  <!-- Top Navigation Bar (ACCURATE GREEN DNA LOGO) -->
+  <!-- Navigation Bar -->
   <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex justify-between items-center sticky top-0 z-30">
     <div class="flex items-center space-x-3">
       <div class="h-10 w-10 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
@@ -38,7 +33,7 @@
     </button>
   </header>
 
-  <!-- Sliding Sidebar -->
+  <!-- Sidebar -->
   <aside id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 p-6 flex flex-col">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-lg font-bold text-white">Tools & Options</h2>
@@ -78,7 +73,6 @@
           <span class="text-xs text-slate-500 block mt-1">PDF files up to 10MB</span>
         </label>
 
-        <!-- Loading Progress Bar -->
         <div id="upload-loader" class="hidden mt-6 text-left">
           <div class="flex justify-between text-xs font-mono mb-1">
             <span id="loader-status" class="text-emerald-400">Processing PDF...</span>
@@ -99,7 +93,6 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Option 1: AI Report -->
         <button onclick="showView('view-report')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-emerald-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
             <div class="w-12 h-12 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center mb-4 text-xl">
@@ -111,19 +104,17 @@
           <span class="mt-6 text-sm font-semibold text-blue-400 flex items-center gap-1">Open Report &rarr;</span>
         </button>
 
-        <!-- Option 2: 3D Organ Map -->
         <button onclick="showView('view-3d')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-purple-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
             <div class="w-12 h-12 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center mb-4 text-xl">
               <i class="fa-solid fa-child-reaching"></i>
             </div>
             <h3 class="text-lg font-bold text-white mb-1 group-hover:text-purple-400 transition">3D Anatomical Map</h3>
-            <p class="text-xs text-slate-400 leading-relaxed">Anatomically accurate 3D full-body silhouette with mapped organ status nodes.</p>
+            <p class="text-xs text-slate-400 leading-relaxed">Anatomically complete transparent body model with mapped organ, vascular, and neural systems.</p>
           </div>
           <span class="mt-6 text-sm font-semibold text-purple-400 flex items-center gap-1">Open 3D Model &rarr;</span>
         </button>
 
-        <!-- Option 3: Med Check -->
         <button onclick="showView('view-meds')" class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg hover:border-emerald-500/50 hover:bg-slate-800/50 transition text-left flex flex-col justify-between group">
           <div>
             <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4 text-xl">
@@ -137,7 +128,7 @@
       </div>
     </section>
 
-    <!-- STEP 3A: Dedicated AI Report View -->
+    <!-- STEP 3A: AI Report View -->
     <section id="view-report" class="view-section">
       <div class="mb-6">
         <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
@@ -156,27 +147,25 @@
 
         <div>
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Key Biomarkers</h3>
-          <div id="biomarker-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Dynamically injected -->
-          </div>
+          <div id="biomarker-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
       </div>
     </section>
 
-    <!-- STEP 3B: Dedicated 3D Organ View (ANATOMICALLY ACCURATE SILHOUETTE) -->
+    <!-- STEP 3B: 3D Organ & Systems View -->
     <section id="view-3d" class="view-section">
       <div class="mb-6 flex justify-between items-end">
         <div>
           <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
             &larr; Back to Options
           </button>
-          <h2 class="text-2xl font-bold text-white">3D Anatomical Body Map</h2>
+          <h2 class="text-2xl font-bold text-white">3D Full-Body System Map</h2>
         </div>
-        <div class="text-xs text-slate-500">Click & drag to rotate silhouette</div>
+        <div class="text-xs text-slate-500">Click & drag to rotate | Transparent exterior view</div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden h-[480px] relative shadow-inner">
+        <div class="lg:col-span-2 bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden h-[520px] relative shadow-inner">
           <div id="canvas-container" class="w-full h-full"></div>
           <div class="absolute bottom-4 left-4 right-4 flex justify-center gap-4 bg-slate-900/90 backdrop-blur-md border border-slate-800 py-2 px-4 rounded-xl text-xs text-slate-300">
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Normal Baseline</span>
@@ -185,21 +174,19 @@
           </div>
         </div>
 
-        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl flex flex-col justify-between">
-          <div>
-            <h3 class="text-sm font-bold text-white mb-4">Anatomical System Breakdown</h3>
-            <div id="organ-status-list" class="space-y-3 text-xs">
-              <!-- Dynamically populated -->
-            </div>
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl flex flex-col justify-between h-[520px]">
+          <div class="overflow-y-auto pr-1">
+            <h3 class="text-sm font-bold text-white mb-4">Anatomical & Vascular System Breakdown</h3>
+            <div id="organ-status-list" class="space-y-3 text-xs"></div>
           </div>
-          <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-500">
-            Organ nodes are dynamically mapped onto anatomical coordinates based on parsed PDF vitals.
+          <div class="mt-4 pt-3 border-t border-slate-800 text-xs text-slate-500 shrink-0">
+            Interactive visualization maps internal organs, blood vessel branches, and neural pathways calculated directly from diagnostic lab inputs.
           </div>
         </div>
       </div>
     </section>
 
-    <!-- STEP 3C: Dedicated Medication Check View (REAL NIH RXNORM API INTEGRATION) -->
+    <!-- STEP 3C: Medication Check View -->
     <section id="view-meds" class="view-section">
       <div class="mb-6">
         <button onclick="showView('view-selection')" class="text-sm font-semibold text-slate-400 hover:text-white flex items-center gap-1 mb-2 transition">
@@ -220,16 +207,11 @@
           </div>
         </div>
 
-        <!-- Dynamic Output Box -->
-        <div id="med-results" class="hidden rounded-xl p-4 border text-xs font-mono space-y-2">
-          <!-- Dynamic check output -->
-        </div>
+        <div id="med-results" class="hidden rounded-xl p-4 border text-xs font-mono space-y-2"></div>
 
         <div>
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Extracted Diagnostic Interactions</h3>
-          <div id="med-list" class="space-y-3">
-            <!-- Dynamically populated -->
-          </div>
+          <div id="med-list" class="space-y-3"></div>
         </div>
       </div>
     </section>
@@ -237,23 +219,20 @@
   </main>
 
   <script>
-    // PDF.js worker setup
     if (typeof pdfjsLib !== 'undefined') {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
-    // State Management
     let healthData = {
       summary: "",
       biomarkers: [],
-      organs: [],
+      structures: [],
       medications: []
     };
 
-    let scene, camera, renderer, bodyGroup, organMeshes = {};
+    let scene, camera, renderer, bodyGroup, structureMeshes = {};
     let isThreeInitialized = false;
 
-    // View Navigation Router
     function showView(viewId) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.getElementById(viewId).classList.add('active');
@@ -269,7 +248,6 @@
       }
     }
 
-    // Sidebar Handler
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebar-overlay');
@@ -284,7 +262,6 @@
       }
     }
 
-    // Progress bar helper
     function updateProgress(statusText, percent) {
       const loader = document.getElementById('upload-loader');
       loader.classList.remove('hidden');
@@ -293,7 +270,6 @@
       document.getElementById('loader-bar').style.width = `${percent}%`;
     }
 
-    // Convert PDF array buffer into Base64 PNG image of Page 1
     async function pdfPageToBase64(arrayBuffer) {
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
@@ -309,7 +285,6 @@
       return canvas.toDataURL('image/png');
     }
 
-    // Real AI PDF Processing Handler
     async function handleFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -349,7 +324,7 @@
             status: v.isAnomaly ? "elevated" : "normal",
             note: v.isAnomaly ? "Metric flags anomaly" : "Normal reference level"
           })),
-          organs: mapVitalsToOrgans(parsed.vitals || [], parsed.urgency_rating),
+          structures: compileAnatomicalData(parsed.affected_structures || [], parsed.vitals || [], parsed.urgency_rating),
           medications: mapJargonToMedications(parsed.jargon_map || {})
         };
 
@@ -367,19 +342,53 @@
       }
     }
 
-    // Convert raw extracted vitals/urgency to organ 3D status colors
-    function mapVitalsToOrgans(vitals, urgency = 1) {
-      const liverAnomaly = vitals.some(v => v.isAnomaly && /alt|ast|liver|bilirubin/i.test(v.metric));
-      const kidneyAnomaly = vitals.some(v => v.isAnomaly && /egfr|creatinine|kidney|bun/i.test(v.metric));
-      const heartAnomaly = vitals.some(v => v.isAnomaly && /heart|bp|pulse|troponin|cholesterol/i.test(v.metric));
+    function getColorForStatus(status) {
+      if (status === 'attention') return 0xf43f5e;
+      if (status === 'monitor') return 0xfacc15;
+      return 0x34d399;
+    }
 
-      return [
-        { key: "brain", name: "Brain", status: urgency > 3 ? "monitor" : "normal", color: urgency > 3 ? 0xfacc15 : 0x34d399, info: "Cerebral and neurological index normal." },
-        { key: "lungs", name: "Lungs", status: "normal", color: 0x34d399, info: "Pulmonary oxygenation standard." },
-        { key: "heart", name: "Heart", status: heartAnomaly ? "attention" : "normal", color: heartAnomaly ? 0xf43f5e : 0x34d399, info: heartAnomaly ? "Cardiac indicator flagged." : "Optimal cardiovascular pressure." },
-        { key: "liver", name: "Liver", status: liverAnomaly ? "attention" : "normal", color: liverAnomaly ? 0xf43f5e : 0x34d399, info: liverAnomaly ? "Hepatic metabolic marker elevation." : "Normal hepatic profile." },
-        { key: "kidneys", name: "Kidneys", status: kidneyAnomaly ? "attention" : "normal", color: kidneyAnomaly ? 0xf43f5e : 0x34d399, info: kidneyAnomaly ? "Renal filtration indicator flagged." : "Optimal renal filtration rates." }
-      ];
+    function compileAnatomicalData(aiStructures, vitals, urgency = 1) {
+      const defaultMap = {
+        brain: { name: "Brain", type: "organ", info: "Neurological baseline clear.", status: "normal" },
+        lungs: { name: "Lungs", type: "organ", info: "Pulmonary baseline stable.", status: "normal" },
+        heart: { name: "Heart", type: "organ", info: "Cardiovascular pressure baseline.", status: "normal" },
+        liver: { name: "Liver", type: "organ", info: "Hepatic metabolic baseline normal.", status: "normal" },
+        kidneys: { name: "Kidneys", type: "organ", info: "Renal filtration profile normal.", status: "normal" },
+        aorta: { name: "Aorta & Main Vessels", type: "vessel", info: "Systemic vascular flow uninterrupted.", status: "normal" },
+        carotid_arteries: { name: "Carotid Arteries", type: "vessel", info: "Cerebrovascular perfusion normal.", status: "normal" },
+        spinal_cord: { name: "Spinal Cord & Neural Axis", type: "nerve", info: "Central nerve transmission clear.", status: "normal" }
+      };
+
+      aiStructures.forEach(item => {
+        if (defaultMap[item.id]) {
+          defaultMap[item.id].status = item.status || "normal";
+          defaultMap[item.id].info = item.info || defaultMap[item.id].info;
+        }
+      });
+
+      // Fallback heuristics if specific structural array wasn't populated
+      if (aiStructures.length === 0) {
+        if (vitals.some(v => v.isAnomaly && /alt|ast|liver|bilirubin/i.test(v.metric))) {
+          defaultMap.liver.status = "attention";
+          defaultMap.liver.info = "Hepatic biomarker elevation observed.";
+        }
+        if (vitals.some(v => v.isAnomaly && /egfr|creatinine|kidney|bun/i.test(v.metric))) {
+          defaultMap.kidneys.status = "attention";
+          defaultMap.kidneys.info = "Renal filtration indicator flagged.";
+        }
+        if (vitals.some(v => v.isAnomaly && /heart|bp|pulse|troponin|cholesterol/i.test(v.metric))) {
+          defaultMap.heart.status = "attention";
+          defaultMap.aorta.status = "monitor";
+          defaultMap.heart.info = "Cardiovascular marker elevation detected.";
+        }
+      }
+
+      return Object.keys(defaultMap).map(key => ({
+        key: key,
+        ...defaultMap[key],
+        color: getColorForStatus(defaultMap[key].status)
+      }));
     }
 
     function mapJargonToMedications(jargonMap) {
@@ -413,18 +422,21 @@
       }
 
       const oContainer = document.getElementById('organ-status-list');
-      oContainer.innerHTML = healthData.organs.map(o => `
+      oContainer.innerHTML = healthData.structures.map(s => `
         <div class="p-3 rounded-xl border border-slate-800 bg-slate-800/40 flex items-center justify-between">
           <div>
-            <span class="font-bold text-slate-200">${o.name}</span>
-            <p class="text-slate-400 text-[11px] mt-0.5">${o.info}</p>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-200">${s.name}</span>
+              <span class="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 font-mono">${s.type}</span>
+            </div>
+            <p class="text-slate-400 text-[11px] mt-0.5">${s.info}</p>
           </div>
-          <span class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: #${o.color.toString(16).padStart(6, '0')}"></span>
+          <span class="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style="background-color: #${s.color.toString(16).padStart(6, '0')}"></span>
         </div>
       `).join('');
 
       if (isThreeInitialized) {
-        update3DMeshColors();
+        update3DStructureColors();
       }
 
       const mContainer = document.getElementById('med-list');
@@ -439,7 +451,6 @@
       `).join('');
     }
 
-    // REAL NIH RXNORM REST API MEDICATION CHECKER
     async function checkMedication() {
       const input = document.getElementById('med-search').value.trim();
       const res = document.getElementById('med-results');
@@ -473,10 +484,10 @@
 
           const lowerName = (props.name || input).toLowerCase();
           if (lowerName.includes("ibuprofen") || lowerName.includes("aspirin") || lowerName.includes("naproxen")) {
-            const kidneyOrg = healthData.organs.find(o => o.key === 'kidneys');
-            if (kidneyOrg && kidneyOrg.status === 'attention') {
+            const kidneyOrg = healthData.structures.find(s => s.key === 'kidneys');
+            if (kidneyOrg && (kidneyOrg.status === 'attention' || kidneyOrg.status === 'monitor')) {
               warningFlag = true;
-              warningReason = "NSAID Class Caution: Flagged kidney anomalies in patient report. Long-term NSAID usage can exacerbate renal strain.";
+              warningReason = "NSAID Class Caution: Flagged renal parameters in patient profile. Prolonged NSAID therapy can induce renal arterial constriction.";
             }
           }
 
@@ -528,109 +539,171 @@
     }
 
     function resetApp() {
-      healthData = { summary: "", biomarkers: [], organs: [], medications: [] };
+      healthData = { summary: "", biomarkers: [], structures: [], medications: [] };
       document.getElementById('sidebar-status').textContent = "No PDF uploaded yet.";
       document.getElementById('pdf-input').value = "";
       toggleSidebar();
       showView('view-upload');
     }
 
-    // ANATOMICALLY ACCURATE 3D BODY SILHOUETTE & ORGAN POSITIONING
+    // ADVANCED REALISTIC TRANSPARENT EXTERIOR 3D MODEL
     function init3DScene() {
       const container = document.getElementById('canvas-container');
       if (!container) return;
 
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 0, 7.5);
+      camera.position.set(0, 0, 7.8);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
       container.appendChild(renderer.domElement);
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambientLight);
 
-      const dirLight = new THREE.DirectionalLight(0x10b981, 1.2);
-      dirLight.position.set(5, 10, 7);
-      scene.add(dirLight);
+      const keyLight = new THREE.DirectionalLight(0x38bdf8, 1.5);
+      keyLight.position.set(5, 8, 5);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x10b981, 1.0);
+      fillLight.position.set(-5, -2, -5);
+      scene.add(fillLight);
 
       bodyGroup = new THREE.Group();
 
-      // Human Body Silhouette Wireframe
-      const bodyMat = new THREE.MeshBasicMaterial({ color: 0x334155, wireframe: true, transparent: true, opacity: 0.35 });
+      // Semi-transparent glassy exterior human body material
+      const glassBodyMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x94a3b8,
+        transparent: true,
+        opacity: 0.18,
+        roughness: 0.1,
+        metalness: 0.1,
+        transmission: 0.85,
+        ior: 1.2,
+        side: THREE.DoubleSide
+      });
 
-      // Head
-      const headGeom = new THREE.SphereGeometry(0.5, 16, 16);
-      const headMesh = new THREE.Mesh(headGeom, bodyMat);
-      headMesh.position.set(0, 2.2, 0);
+      // Constructing realistic outer silhouette mesh
+      const headGeom = new THREE.SphereGeometry(0.55, 32, 32);
+      headGeom.scale(1, 1.2, 1);
+      const headMesh = new THREE.Mesh(headGeom, glassBodyMaterial);
+      headMesh.position.set(0, 2.3, 0);
       bodyGroup.add(headMesh);
 
-      // Neck
-      const neckGeom = new THREE.CylinderGeometry(0.2, 0.22, 0.3, 12);
-      const neckMesh = new THREE.Mesh(neckGeom, bodyMat);
+      const neckGeom = new THREE.CylinderGeometry(0.22, 0.28, 0.4, 32);
+      const neckMesh = new THREE.Mesh(neckGeom, glassBodyMaterial);
       neckMesh.position.set(0, 1.7, 0);
       bodyGroup.add(neckMesh);
 
-      // Torso
-      const torsoGeom = new THREE.CylinderGeometry(0.7, 0.5, 2.0, 16);
-      const torsoMesh = new THREE.Mesh(torsoGeom, bodyMat);
-      torsoMesh.position.set(0, 0.5, 0);
+      const torsoGeom = new THREE.CylinderGeometry(0.75, 0.52, 2.1, 32);
+      torsoGeom.scale(1.1, 1, 0.7);
+      const torsoMesh = new THREE.Mesh(torsoGeom, glassBodyMaterial);
+      torsoMesh.position.set(0, 0.45, 0);
       bodyGroup.add(torsoMesh);
 
-      // Pelvis / Hips
-      const pelvisGeom = new THREE.CylinderGeometry(0.5, 0.45, 0.6, 16);
-      const pelvisMesh = new THREE.Mesh(pelvisGeom, bodyMat);
-      pelvisMesh.position.set(0, -0.8, 0);
+      const pelvisGeom = new THREE.CylinderGeometry(0.52, 0.48, 0.7, 32);
+      pelvisGeom.scale(1.05, 1, 0.75);
+      const pelvisMesh = new THREE.Mesh(pelvisGeom, glassBodyMaterial);
+      pelvisMesh.position.set(0, -0.85, 0);
       bodyGroup.add(pelvisMesh);
 
-      // Legs
-      const legGeom = new THREE.CylinderGeometry(0.18, 0.12, 1.8, 12);
-      const leftLeg = new THREE.Mesh(legGeom, bodyMat);
-      leftLeg.position.set(-0.3, -1.9, 0);
-      const rightLeg = new THREE.Mesh(legGeom, bodyMat);
-      rightLeg.position.set(0.3, -1.9, 0);
+      const upperArmGeom = new THREE.CylinderGeometry(0.16, 0.13, 1.2, 16);
+      const leftArm = new THREE.Mesh(upperArmGeom, glassBodyMaterial);
+      leftArm.position.set(-0.95, 0.8, 0);
+      leftArm.rotation.z = 0.2;
+      const rightArm = new THREE.Mesh(upperArmGeom, glassBodyMaterial);
+      rightArm.position.set(0.95, 0.8, 0);
+      rightArm.rotation.z = -0.2;
+      bodyGroup.add(leftArm);
+      bodyGroup.add(rightArm);
+
+      const legGeom = new THREE.CylinderGeometry(0.24, 0.15, 2.0, 32);
+      const leftLeg = new THREE.Mesh(legGeom, glassBodyMaterial);
+      leftLeg.position.set(-0.35, -2.1, 0);
+      const rightLeg = new THREE.Mesh(legGeom, glassBodyMaterial);
+      rightLeg.position.set(0.35, -2.1, 0);
       bodyGroup.add(leftLeg);
       bodyGroup.add(rightLeg);
 
-      // Anatomical Organ Nodes
+      // Blood Vessel Network (Cardiovascular system overlay)
+      const vesselMaterial = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        roughness: 0.3,
+        metalness: 0.2,
+        emissive: 0x991b1b,
+        emissiveIntensity: 0.3
+      });
+
+      const aortaPath = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0.95, 0.1),
+        new THREE.Vector3(-0.05, 0.8, 0.05),
+        new THREE.Vector3(0, 0.2, 0.02),
+        new THREE.Vector3(0, -0.7, 0.0)
+      ]);
+      const aortaGeom = new THREE.TubeGeometry(aortaPath, 32, 0.04, 12, false);
+      const aortaMesh = new THREE.Mesh(aortaGeom, vesselMaterial);
+      bodyGroup.add(aortaMesh);
+
+      const carotidLeftPath = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-0.05, 0.95, 0.08),
+        new THREE.Vector3(-0.12, 1.7, 0.05),
+        new THREE.Vector3(-0.15, 2.1, 0.02)
+      ]);
+      const carotidMesh = new THREE.Mesh(new THREE.TubeGeometry(carotidLeftPath, 20, 0.02, 8, false), vesselMaterial);
+      bodyGroup.add(carotidMesh);
+
+      // Nerve Network (Spinal Cord & Axis overlay)
+      const nerveMaterial = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        roughness: 0.2,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.4
+      });
+
+      const spinalPath = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 2.1, -0.15),
+        new THREE.Vector3(0, 1.5, -0.2),
+        new THREE.Vector3(0, 0.2, -0.18),
+        new THREE.Vector3(0, -0.8, -0.12)
+      ]);
+      const spinalMesh = new THREE.Mesh(new THREE.TubeGeometry(spinalPath, 32, 0.03, 8, false), nerveMaterial);
+      bodyGroup.add(spinalMesh);
+
+      // Interactive Anatomical Nodes
       const anatomicalPositions = {
-        brain: { pos: [0, 2.2, 0], scale: 0.28 },
-        lungs: { pos: [0, 1.0, 0.1], scale: 0.32 },
-        heart: { pos: [-0.15, 0.95, 0.25], scale: 0.2 },
-        liver: { pos: [0.22, 0.4, 0.2], scale: 0.24 },
-        kidneys: { pos: [0, -0.1, -0.15], scale: 0.22 }
+        brain: { pos: [0, 2.3, 0], geom: new THREE.SphereGeometry(0.28, 24, 24) },
+        lungs: { pos: [0, 1.05, 0.05], geom: new THREE.SphereGeometry(0.32, 24, 24) },
+        heart: { pos: [-0.15, 0.95, 0.2], geom: new THREE.SphereGeometry(0.22, 24, 24) },
+        liver: { pos: [0.22, 0.45, 0.15], geom: new THREE.SphereGeometry(0.26, 24, 24) },
+        kidneys: { pos: [0, -0.05, -0.12], geom: new THREE.SphereGeometry(0.22, 24, 24) },
+        aorta: { pos: [0, 0.3, 0.08], geom: new THREE.CylinderGeometry(0.06, 0.06, 0.4, 16) },
+        carotid_arteries: { pos: [-0.12, 1.7, 0.05], geom: new THREE.CylinderGeometry(0.04, 0.04, 0.3, 16) },
+        spinal_cord: { pos: [0, 0.8, -0.19], geom: new THREE.CylinderGeometry(0.05, 0.05, 0.5, 16) }
       };
 
-      const defaultNodes = healthData.organs.length > 0 ? healthData.organs : [
-        { key: "brain", name: "Brain", color: 0x34d399 },
-        { key: "lungs", name: "Lungs", color: 0x34d399 },
-        { key: "heart", name: "Heart", color: 0x34d399 },
-        { key: "liver", name: "Liver", color: 0x34d399 },
-        { key: "kidneys", name: "Kidneys", color: 0x34d399 }
-      ];
+      const currentStructures = healthData.structures.length > 0 ? healthData.structures : compileAnatomicalData([], []);
 
-      defaultNodes.forEach(data => {
-        const config = anatomicalPositions[data.key] || { pos: [0, 0, 0], scale: 0.2 };
-        const geom = new THREE.SphereGeometry(config.scale, 24, 24);
+      currentStructures.forEach(data => {
+        const config = anatomicalPositions[data.key] || { pos: [0, 0, 0], geom: new THREE.SphereGeometry(0.18, 16, 16) };
         const mat = new THREE.MeshStandardMaterial({
           color: data.color,
           roughness: 0.2,
           metalness: 0.3,
           emissive: data.color,
-          emissiveIntensity: 0.2
+          emissiveIntensity: 0.35
         });
-        const mesh = new THREE.Mesh(geom, mat);
+        const mesh = new THREE.Mesh(config.geom, mat);
         mesh.position.set(...config.pos);
 
-        organMeshes[data.key] = mesh;
+        structureMeshes[data.key] = mesh;
         bodyGroup.add(mesh);
       });
 
       scene.add(bodyGroup);
 
-      // Interaction
+      // Mouse and Touch Interaction Handler
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
 
@@ -675,12 +748,12 @@
       animate();
     }
 
-    function update3DMeshColors() {
-      if (!healthData.organs || healthData.organs.length === 0) return;
-      healthData.organs.forEach(o => {
-        if (organMeshes[o.key] && organMeshes[o.key].material) {
-          organMeshes[o.key].material.color.setHex(o.color);
-          organMeshes[o.key].material.emissive.setHex(o.color);
+    function update3DStructureColors() {
+      if (!healthData.structures || healthData.structures.length === 0) return;
+      healthData.structures.forEach(s => {
+        if (structureMeshes[s.key] && structureMeshes[s.key].material) {
+          structureMeshes[s.key].material.color.setHex(s.color);
+          structureMeshes[s.key].material.emissive.setHex(s.color);
         }
       });
     }
